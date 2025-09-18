@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shinobihaven/core/config/config.dart';
+import 'package:shinobihaven/features/anime/common/model/anime.dart';
 import 'package:shinobihaven/features/anime/discovery/model/search.dart';
 import 'package:http/http.dart' as http;
 
@@ -34,6 +35,23 @@ class SearchRepository {
         return Search.fromMap(data);
       }
       throw Exception("Error occured while fetching data");
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  Future<List<Anime>> getSearchSuggestions() async {
+    try {
+      String url = '${Config.apiBaseUrl}/trending';
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return (data['trending'] as List)
+            .map((anime) => Anime.fromMap(anime))
+            .toList();
+      } else {
+        throw Exception("Error occured while fetching data");
+      }
     } catch (e) {
       throw Exception(e.toString());
     }
