@@ -20,6 +20,7 @@ class SearchRepository {
   }) async {
     try {
       String url = '$_baseURL?query=${query.replaceAll(" ", "%20")}';
+      print(url);
       if (type != null) url += '&type=$type';
       if (status != null) url += '&status=$status';
       if (rating != null) url += '&rating=$rating';
@@ -30,6 +31,7 @@ class SearchRepository {
       if (genres != null) url += '&genres=$genres';
       url += '&page=$page';
       final response = await http.get(Uri.parse(url));
+      print(response.body);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return Search.fromMap(data);
