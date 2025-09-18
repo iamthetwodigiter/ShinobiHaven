@@ -51,6 +51,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
   @override
   void initState() {
     super.initState();
+    _nameController = TextEditingController();
     _isFavorite = FavoritesBoxFunctions.isFavorite(widget.animeSlug);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAnimeDetails();
@@ -556,7 +557,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
               child: Text(
                 'Cancel',
                 style: TextStyle(
-                  color: AppTheme.gradient2,
+                  color: AppTheme.gradient1,
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
@@ -578,6 +579,12 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                 setState(() {
                   _loadCollections();
                 });
+                Toast(
+                  context: context,
+                  title: 'Success',
+                  description: 'A new collection $name is created',
+                  type: ToastificationType.success,
+                );
                 Navigator.pop(context);
               },
               child: Text(

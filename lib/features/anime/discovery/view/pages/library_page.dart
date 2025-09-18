@@ -113,7 +113,7 @@ class _LibraryPageState extends State<LibraryPage> {
               child: Text(
                 'Cancel',
                 style: TextStyle(
-                  color: AppTheme.gradient2,
+                  color: AppTheme.gradient1,
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
@@ -171,7 +171,7 @@ class _LibraryPageState extends State<LibraryPage> {
               child: Text(
                 'Cancel',
                 style: TextStyle(
-                  color: AppTheme.gradient2,
+                  color: AppTheme.gradient1,
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
