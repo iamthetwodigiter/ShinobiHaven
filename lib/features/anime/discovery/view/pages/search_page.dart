@@ -59,11 +59,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       });
       return;
     }
-    
+
     setState(() {
       _isSearching = true;
     });
-    
+
     ref.read(searchViewModelProvider.notifier).searchAnime(query);
   }
 
@@ -76,7 +76,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   Widget _buildSearchResults() {
     final searchResults = ref.watch(searchViewModelProvider);
-    
+
     return searchResults.when(
       data: (searchData) {
         if (searchData.animes.isEmpty) {
@@ -94,15 +94,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             child: Center(
               child: Text(
                 'No results found',
-                style: TextStyle(
-                  color: AppTheme.gradient1,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: AppTheme.gradient1, fontSize: 16),
               ),
             ),
           );
         }
-        
+
         return Container(
           height: 250,
           margin: EdgeInsets.only(top: 80, right: 15, left: 15),
@@ -139,10 +136,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 ),
                 title: Text(
                   anime.title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -154,7 +148,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => SearchResultPage(query: anime.title),
+                      builder: (context) =>
+                          SearchResultPage(query: anime.title),
                     ),
                   );
                 },
@@ -174,9 +169,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           border: Border.all(color: AppTheme.gradient1),
         ),
         child: Center(
-          child: CircularProgressIndicator(
-            color: AppTheme.gradient1,
-          ),
+          child: CircularProgressIndicator(color: AppTheme.gradient1),
         ),
       ),
       error: (error, stackTrace) => Container(
@@ -192,10 +185,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         child: Center(
           child: Text(
             'Error loading results',
-            style: TextStyle(
-              color: AppTheme.gradient1,
-              fontSize: 16,
-            ),
+            style: TextStyle(color: AppTheme.gradient1, fontSize: 16),
           ),
         ),
       ),
@@ -206,7 +196,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final searchSuggestions = ref.watch(searchSuggestionsViewModelProvider);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Search', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -234,7 +224,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           cursorColor: AppTheme.gradient1,
                           style: TextStyle(fontSize: 16),
                           onChanged: (query) {
-                            if (query.length > 2) { // Changed from 3 to 2 for better UX
+                            if (query.length > 2) {
+                              // Changed from 3 to 2 for better UX
                               _searchAnime(query);
                             } else {
                               setState(() {
@@ -262,9 +253,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           },
                           decoration: InputDecoration(
                             hintText: 'What Would You Like to Watch?',
-                            hintStyle: TextStyle(
-                              fontSize: 16,
-                            ),
+                            hintStyle: TextStyle(fontSize: 16),
                             border: _border,
                             enabledBorder: _border,
                             focusedBorder: _focusedBorder,
@@ -427,17 +416,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Container(
-                                    padding: EdgeInsets.all(18),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.gradient1,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.error,
-                                      color: AppTheme.gradient1,
-                                      size: 48,
-                                    ),
+                                  Icon(
+                                    Icons.error,
+                                    color: AppTheme.gradient1,
+                                    size: 48,
                                   ),
                                   SizedBox(height: 16),
                                   Text(
@@ -478,6 +460,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                       ),
                                     ),
                                   ),
+                                  SizedBox(height: 10),
                                 ],
                               ),
                             ),
@@ -487,9 +470,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                 children: [
                                   Shimmer.fromColors(
                                     baseColor: AppTheme.blackGradient,
-                                    highlightColor: AppTheme.gradient1.withAlpha(
-                                      77,
-                                    ),
+                                    highlightColor: AppTheme.gradient1
+                                        .withAlpha(77),
                                     child: Icon(
                                       Icons.search,
                                       size: 72,
@@ -499,9 +481,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                   SizedBox(height: 18),
                                   Shimmer.fromColors(
                                     baseColor: AppTheme.blackGradient,
-                                    highlightColor: AppTheme.gradient1.withAlpha(
-                                      77,
-                                    ),
+                                    highlightColor: AppTheme.gradient1
+                                        .withAlpha(77),
                                     child: Text(
                                       'Loading...',
                                       style: TextStyle(

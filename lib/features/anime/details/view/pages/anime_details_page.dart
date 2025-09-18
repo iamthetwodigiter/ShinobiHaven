@@ -11,7 +11,7 @@ import 'package:shinobihaven/features/anime/details/dependency_injection/anime_d
 import 'package:shinobihaven/features/anime/details/model/anime_details.dart';
 import 'package:shinobihaven/features/anime/episodes/view/pages/episodes_page.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:toastification/toastification.dart'; // Add shimmer package for image loading
+import 'package:toastification/toastification.dart';
 
 class AnimeDetailsPage extends ConsumerStatefulWidget {
   final String animeSlug;
@@ -22,10 +22,31 @@ class AnimeDetailsPage extends ConsumerStatefulWidget {
 }
 
 class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
-  // int _currentBottomBarIndex = 0;
   int _currentTabIndex = 0;
   bool _isFavorite = false;
   Anime? _anime;
+
+  late final TextEditingController _nameController;
+
+  final OutlineInputBorder _border = OutlineInputBorder(
+    borderSide: BorderSide(color: AppTheme.whiteGradient),
+    borderRadius: BorderRadius.circular(15),
+  );
+  final OutlineInputBorder _focusedBorder = OutlineInputBorder(
+    borderSide: BorderSide(color: AppTheme.gradient1),
+    borderRadius: BorderRadius.circular(15),
+  );
+
+  final Map<String, List<Anime>> _collections = {};
+
+  void _loadCollections() {
+    _collections.clear();
+    final collections = LibraryBoxFunction.getCollections();
+    for (var name in collections) {
+      final animes = LibraryBoxFunction.getAnimesInCollection(name);
+      _collections[name] = animes;
+    }
+  }
 
   @override
   void initState() {
@@ -33,6 +54,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
     _isFavorite = FavoritesBoxFunctions.isFavorite(widget.animeSlug);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAnimeDetails();
+      _loadCollections();
     });
   }
 
@@ -115,7 +137,6 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                     ],
                   )
                 : null,
-            // color: isSelected ? null : AppTheme.blackGradient,
             borderRadius: BorderRadius.circular(15),
             boxShadow: isSelected
                 ? [
@@ -265,7 +286,6 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                   color: AppTheme.gradient1,
                 ),
               ),
-              // backgroundColor: AppTheme.blackGradient,
               shape: StadiumBorder(side: BorderSide(color: AppTheme.gradient1)),
               padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             );
@@ -331,7 +351,6 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
             producer.name,
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          // backgroundColor: AppTheme.blackGradient,
           shape: StadiumBorder(side: BorderSide(color: AppTheme.gradient1)),
         );
       }),
@@ -339,56 +358,6 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
   }
 
   Widget _seasonsDetailsTab(AnimeDetails anime) {
-    // return Wrap(
-    //   spacing: 8,
-    //   runSpacing: 8,
-    //   children: List.generate(anime.seasons.length, (index) {
-    //     final season = anime.seasons.elementAt(index);
-    //     return GestureDetector(
-    //       onTap: () {
-    //         Navigator.push(
-    //           context,
-    //           MaterialPageRoute(
-    //             builder: (context) => AnimeDetailsPage(animeSlug: season.slug),
-    //           ),
-    //         );
-    //       },
-    //       child: SizedBox(
-    //         height: 200,
-    //         width: 120,
-    //         child: Column(
-    //           children: [
-    //             ClipRRect(
-    //               borderRadius: BorderRadius.circular(12),
-    //               child: CachedNetworkImage(
-    //                 imageUrl: season.image,
-    //                 height: 150,
-    //                 width: 120,
-    //                 fit: BoxFit.fitWidth,
-    //                 placeholder: (context, url) => Shimmer.fromColors(
-    //                   baseColor: AppTheme.blackGradient,
-    //                   highlightColor: AppTheme.gradient1.withValues(alpha: 0.3),
-    //                   child: Container(
-    //                     height: 150,
-    //                     width: 120,
-    //                     color: AppTheme.blackGradient,
-    //                   ),
-    //                 ),
-    //               ),
-    //             ),
-    //             SizedBox(height: 6),
-    //             Text(
-    //               season.title,
-    //               maxLines: 2,
-    //               textAlign: TextAlign.center,
-    //               style: TextStyle(fontWeight: FontWeight.bold),
-    //             ),
-    //           ],
-    //         ),
-    //       ),
-    //     );
-    //   }),
-    // );
     return anime.seasons.isNotEmpty
         ? Container(
             height: 250,
@@ -540,6 +509,92 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
     );
   }
 
+  void _addUserList() {
+    showAdaptiveDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog.adaptive(
+          title: Text('Add Your Custom List'),
+          titleTextStyle: TextStyle(fontSize: 18, color: AppTheme.gradient1),
+          content: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(15),
+            child: TextField(
+              controller: _nameController,
+              cursorColor: AppTheme.gradient1,
+              style: TextStyle(fontSize: 16),
+              onSubmitted: (name) {
+                final trimmed = name.trim();
+                if (trimmed.isEmpty) return;
+                LibraryBoxFunction.createCustomCollectionInLibrary(trimmed);
+                _nameController.clear();
+                _loadCollections();
+                Navigator.pop(context);
+              },
+              decoration: InputDecoration(
+                hintText: 'Enter List Name',
+                hintStyle: TextStyle(fontSize: 16),
+                labelStyle: TextStyle(color: AppTheme.blackGradient),
+                floatingLabelBehavior: FloatingLabelBehavior.always,
+                border: _border,
+                enabledBorder: _border,
+                focusedBorder: _focusedBorder,
+                contentPadding: EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 18,
+                ),
+              ),
+            ),
+          ),
+          actionsPadding: EdgeInsets.only(right: 20, bottom: 10),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _nameController.clear();
+                Navigator.pop(context);
+              },
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: AppTheme.gradient2,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: AppTheme.gradient1,
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                final name = _nameController.text.trim();
+                if (name.isEmpty) return;
+                LibraryBoxFunction.createCustomCollectionInLibrary(name);
+                _nameController.clear();
+                setState(() {
+                  _loadCollections();
+                });
+                Navigator.pop(context);
+              },
+              child: Text(
+                'Create',
+                style: TextStyle(
+                  color: AppTheme.whiteGradient,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -591,7 +646,6 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
               icon: Icon(
                 _isFavorite ? Icons.favorite : Icons.favorite_border_rounded,
                 color: AppTheme.gradient1,
-                // : AppTheme.whiteGradient,
                 size: 28,
               ),
               tooltip: _isFavorite
@@ -626,12 +680,26 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                                     horizontal: 20,
                                     vertical: 30,
                                   ),
-                                  child: Text(
-                                    'No Collections found.\nCreate new collections from Library Page',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'No Collections found.',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      TextButton(
+                                        onPressed: _addUserList,
+                                        child: Text(
+                                          'Create a Collection',
+                                          style: TextStyle(
+                                            color: AppTheme.gradient1,
+                                            fontSize: 18,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 )
                               : Column(
@@ -643,24 +711,6 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                                         LibraryBoxFunction.getAnimesInCollection(
                                           title,
                                         ).length;
-                                    // return ListTile(
-                                    //   onTap: () {
-                                    //     if (_anime != null) {
-                                    //       LibraryBoxFunction.addAnimeToCollection(
-                                    //         title,
-                                    //         _anime!,
-                                    //       );
-                                    //       Navigator.pop(context, true);
-                                    //     }
-                                    //   },
-                                    //   title: Text(
-                                    //     title,
-                                    //     style: TextStyle(
-                                    //       color: AppTheme.gradient1,
-                                    //       fontWeight: FontWeight.bold,
-                                    //     ),
-                                    //   ),
-                                    // );
                                     return ListTile(
                                       onTap: () {
                                         if (_anime != null) {
@@ -728,12 +778,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                   },
                 );
               },
-              icon: Icon(
-                Icons.add,
-                color: AppTheme.gradient1,
-                // : AppTheme.whiteGradient,
-                size: 28,
-              ),
+              icon: Icon(Icons.add, color: AppTheme.gradient1, size: 28),
             ),
           ],
           orElse: () => [],
@@ -876,7 +921,6 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                       width: size.width,
                       margin: EdgeInsets.symmetric(horizontal: 15),
                       decoration: BoxDecoration(
-                        // color: AppTheme.blackGradient,
                         borderRadius: BorderRadius.circular(15),
                         boxShadow: [
                           BoxShadow(

@@ -109,14 +109,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: AppTheme.gradient1,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.error, color: AppTheme.gradient1, size: 48),
-              ),
+              Icon(Icons.error, color: AppTheme.gradient1, size: 48),
               SizedBox(height: 16),
               Text(
                 'Error occured while fetching the data.\nPlease check your internet connection or try again later.',
