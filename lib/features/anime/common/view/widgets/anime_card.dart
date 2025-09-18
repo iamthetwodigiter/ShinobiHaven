@@ -7,11 +7,15 @@ class AnimeCard extends StatelessWidget {
   final Anime anime;
   final bool showAdditionalInfo;
   final Size? size;
+  final bool twoLineTitle;
+  final TextStyle? textStyle;
   const AnimeCard({
     super.key,
     required this.anime,
     this.showAdditionalInfo = true,
     this.size,
+    this.twoLineTitle = false,
+    this.textStyle,
   });
 
   @override
@@ -47,15 +51,15 @@ class AnimeCard extends StatelessWidget {
           ),
           SizedBox(height: 5),
           SizedBox(
-            width: 150,
+            width: size?.width ?? 150,
             child: Text(
               anime.title,
-              style: TextStyle(
+              style: textStyle ?? TextStyle(
                 // color: AppTheme.whiteGradient,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
-              maxLines: 1,
+              maxLines: twoLineTitle ? 2 : 1,
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
             ),
