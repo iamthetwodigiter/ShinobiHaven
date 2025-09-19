@@ -1227,7 +1227,7 @@ class ChangelogPage extends StatelessWidget {
                   : <String>[];
 
               return Card(
-                color: AppTheme.blackGradient.withAlpha(28),
+                // color: AppTheme.blackGradient.withAlpha(28),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

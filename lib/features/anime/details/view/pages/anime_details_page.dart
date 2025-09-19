@@ -869,58 +869,128 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                       textAlign: TextAlign.center,
                     ),
                     SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => EpisodesPage(anime: _anime!),
-                          ),
-                        );
-                        setState(() {
-                          _isFavorite = FavoritesBoxFunctions.isFavorite(
-                            widget.animeSlug,
-                          );
-                        });
-                      },
-                      child: Container(
-                        width: size.width,
-                        padding: EdgeInsets.all(12),
-                        margin: EdgeInsets.symmetric(horizontal: 15),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(15),
-                          gradient: LinearGradient(
-                            colors: [AppTheme.gradient1, AppTheme.gradient2],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.gradient1.withValues(alpha: 0.2),
-                              blurRadius: 8,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.play_arrow_rounded,
-                              color: AppTheme.whiteGradient,
-                              size: 24,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Watch Now',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.whiteGradient,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        GestureDetector(
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    EpisodesPage(anime: _anime!),
                               ),
+                            );
+                            setState(() {
+                              _isFavorite = FavoritesBoxFunctions.isFavorite(
+                                widget.animeSlug,
+                              );
+                            });
+                          },
+                          child: Container(
+                            // width: size.width,
+                            padding: EdgeInsets.all(12),
+                            margin: EdgeInsets.symmetric(horizontal: 15),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppTheme.gradient1,
+                                  AppTheme.gradient2,
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.gradient1.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
                             ),
-                          ],
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.play_arrow_rounded,
+                                  color: AppTheme.whiteGradient,
+                                  size: 24,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Watch Now',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.whiteGradient,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
+                        GestureDetector(
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    EpisodesPage(anime: _anime!),
+                              ),
+                            );
+                            setState(() {
+                              _isFavorite = FavoritesBoxFunctions.isFavorite(
+                                widget.animeSlug,
+                              );
+                            });
+                          },
+                          child: Container(
+                            // width: size.width,
+                            padding: EdgeInsets.all(12),
+                            margin: EdgeInsets.symmetric(horizontal: 15),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppTheme.gradient1,
+                                  AppTheme.gradient2,
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.gradient1.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.list,
+                                  color: AppTheme.whiteGradient,
+                                  size: 24,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'List All Episodes',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.whiteGradient,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     SizedBox(height: 18),
                     Container(
@@ -963,14 +1033,16 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, color: AppTheme.gradient2, size: 64),
+              Icon(Icons.error_outline, color: AppTheme.gradient1, size: 48),
               SizedBox(height: 16),
               Text(
                 'Error occured while fetching the data.\nPlease check your internet connection or try again later.',
                 style: TextStyle(
-                  color: AppTheme.gradient2,
+                  color: AppTheme.gradient1,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
+                textAlign: TextAlign.center,
               ),
               SizedBox(height: 8),
               ElevatedButton.icon(

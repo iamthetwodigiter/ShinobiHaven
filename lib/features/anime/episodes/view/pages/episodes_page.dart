@@ -9,7 +9,7 @@ import 'package:shinobihaven/core/utils/toast.dart';
 import 'package:shinobihaven/features/anime/common/model/anime.dart';
 import 'package:shinobihaven/features/anime/episodes/dependency_injection/episodes_provider.dart';
 import 'package:shinobihaven/features/anime/episodes/model/episodes.dart';
-import 'package:shinobihaven/features/anime/episodes/view/widgets/servers_card.dart';
+import 'package:shinobihaven/features/anime/stream/view/pages/sources_page.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:toastification/toastification.dart';
 
@@ -94,12 +94,22 @@ class _EpisodesPageState extends ConsumerState<EpisodesPage> {
     });
   }
 
-  void _loadServers(String episodeID, String title) {
-    showModalBottomSheet(
-      backgroundColor: AppTheme.blackGradient,
-      context: context,
-      builder: (context) =>
-          ServersCard(episodeID: episodeID, anime: widget.anime, title: title),
+  void _playEpisode(Episodes selectedEpisode) {
+    // Add to library when episode is selected
+    LibraryBoxFunction.addToLibrary(widget.anime, selectedEpisode.episodeID);
+
+    // Navigate directly to SourcesPage with all episodes
+    // Don't pass serverID so it will auto-select the first available server
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SourcesPage(
+          anime: widget.anime,
+          episodes: _allEpisodes,
+          currentEpisode: selectedEpisode,
+          // serverID: null, // Let it auto-select first server
+        ),
+      ),
     );
   }
 
@@ -287,7 +297,7 @@ class _EpisodesPageState extends ConsumerState<EpisodesPage> {
             side: BorderSide(color: AppTheme.gradient1, width: 0.25),
           ),
           onTap: () {
-            _loadServers(episode.episodeID, episode.title);
+            _playEpisode(episode); // Direct navigation to video player
           },
           leading: Stack(
             alignment: Alignment.center,

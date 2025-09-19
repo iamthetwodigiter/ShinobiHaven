@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shinobihaven/features/anime/common/model/anime.dart';
+import 'package:shinobihaven/features/anime/episodes/model/episodes.dart';
 
 class LibraryBoxFunction {
   LibraryBoxFunction._internal();
@@ -7,6 +8,50 @@ class LibraryBoxFunction {
   factory LibraryBoxFunction() => _instance;
 
   static Box get _libraryBox => Hive.box('library');
+
+  static String? getLastWatchedEpisode(String animeSlug) {
+    final lastWatchedMap = _libraryBox.get('lastWatched');
+    if (lastWatchedMap is Map) {
+      return lastWatchedMap[animeSlug]?.toString();
+    }
+    return null;
+  }
+
+  static void markLastWatchedEpisode(String animeSlug, String episodeNumber) {
+    final existingData = _libraryBox.get('lastWatched');
+    final Map<String, String> lastWatchedMap = {};
+
+    if (existingData is Map) {
+      existingData.forEach((key, value) {
+        lastWatchedMap[key.toString()] = value.toString();
+      });
+    }
+
+    lastWatchedMap[animeSlug] = episodeNumber;
+
+    _libraryBox.put('lastWatched', lastWatchedMap);
+  }
+
+  static Episodes? getLastWatchedEpisodeObject(
+    String animeSlug,
+    List<Episodes> episodes,
+  ) {
+    final lastWatchedEpisodeNumber = getLastWatchedEpisode(animeSlug);
+    if (lastWatchedEpisodeNumber == null) return null;
+
+    try {
+      return episodes.firstWhere(
+        (episode) => episode.episodeNumber == lastWatchedEpisodeNumber,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static Episodes? getFirstEpisode(List<Episodes> episodes) {
+    if (episodes.isEmpty) return null;
+    return episodes.first;
+  }
 
   static List<Map<String, List<String>>> _getLibraryList() {
     final raw = _libraryBox.get('library_list');
