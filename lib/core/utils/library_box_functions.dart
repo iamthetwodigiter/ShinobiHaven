@@ -26,9 +26,7 @@ class LibraryBoxFunction {
         lastWatchedMap[key.toString()] = value.toString();
       });
     }
-
     lastWatchedMap[animeSlug] = episodeNumber;
-
     _libraryBox.put('lastWatched', lastWatchedMap);
   }
 
@@ -38,11 +36,11 @@ class LibraryBoxFunction {
   ) {
     final lastWatchedEpisodeNumber = getLastWatchedEpisode(animeSlug);
     if (lastWatchedEpisodeNumber == null) return null;
-
     try {
-      return episodes.firstWhere(
+      final foundEpisode = episodes.firstWhere(
         (episode) => episode.episodeNumber == lastWatchedEpisodeNumber,
       );
+      return foundEpisode;
     } catch (e) {
       return null;
     }

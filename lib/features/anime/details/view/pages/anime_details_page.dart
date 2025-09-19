@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/core/utils/favorites_box_functions.dart';
 import 'package:shinobihaven/core/utils/library_box_functions.dart';
@@ -10,6 +11,9 @@ import 'package:shinobihaven/features/anime/common/view/widgets/anime_card.dart'
 import 'package:shinobihaven/features/anime/details/dependency_injection/anime_details_provider.dart';
 import 'package:shinobihaven/features/anime/details/model/anime_details.dart';
 import 'package:shinobihaven/features/anime/episodes/view/pages/episodes_page.dart';
+import 'package:shinobihaven/features/anime/episodes/dependency_injection/episodes_provider.dart';
+import 'package:shinobihaven/features/anime/episodes/model/episodes.dart';
+import 'package:shinobihaven/features/anime/stream/view/pages/sources_page.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:toastification/toastification.dart';
 
@@ -25,6 +29,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
   int _currentTabIndex = 0;
   bool _isFavorite = false;
   Anime? _anime;
+  List<Episodes> _episodes = [];
 
   late final TextEditingController _nameController;
 
@@ -55,6 +60,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
     _isFavorite = FavoritesBoxFunctions.isFavorite(widget.animeSlug);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAnimeDetails();
+      _loadEpisodes();
       _loadCollections();
     });
   }
@@ -63,6 +69,90 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
     ref
         .read(animeDetailsViewModelProvider.notifier)
         .getAnimeDetailsData(widget.animeSlug);
+  }
+
+  void _loadEpisodes() {
+    ref.read(episodesViewModelProvider.notifier).loadEpisodes(widget.animeSlug);
+  }
+
+  void _handleWatchNow() {
+    if (_anime == null || _episodes.isEmpty) {
+      _showLoadingDialog();
+      return;
+    }
+    // final lastWatchedEpisodeNumber = LibraryBoxFunction.getLastWatchedEpisode(
+    //   widget.animeSlug,
+    // );
+    final lastWatchedEpisode = LibraryBoxFunction.getLastWatchedEpisodeObject(
+      widget.animeSlug,
+      _episodes,
+    );
+    final episodeToPlay =
+        lastWatchedEpisode ?? LibraryBoxFunction.getFirstEpisode(_episodes);
+    if (episodeToPlay != null) {
+      LibraryBoxFunction.addToLibrary(_anime!, episodeToPlay.episodeID);
+      LibraryBoxFunction.markLastWatchedEpisode(
+        widget.animeSlug,
+        episodeToPlay.episodeNumber,
+      );
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SourcesPage(
+            anime: _anime!,
+            episodes: _episodes,
+            currentEpisode: episodeToPlay,
+          ),
+        ),
+      ).then((_) {
+        if (mounted) {
+          setState(() {});
+        }
+      });
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => EpisodesPage(anime: _anime!)),
+      );
+    }
+  }
+
+  void _showLoadingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.blackGradient,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: AppTheme.gradient1),
+            SizedBox(height: 16),
+            Text(
+              'Loading episodes...',
+              style: TextStyle(color: AppTheme.whiteGradient, fontSize: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    Future.delayed(Duration(seconds: 3), () {
+      if (mounted) {
+        Navigator.of(context).pop();
+        if (_episodes.isNotEmpty) {
+          _handleWatchNow();
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EpisodesPage(anime: _anime!),
+            ),
+          );
+        }
+      }
+    });
   }
 
   void _showFullDescription(String description) {
@@ -606,6 +696,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final animeDetailsData = ref.watch(animeDetailsViewModelProvider);
+    final episodesData = ref.watch(episodesViewModelProvider);
 
     _isFavorite = FavoritesBoxFunctions.isFavorite(widget.animeSlug);
 
@@ -805,6 +896,12 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
             dubCount: anime.dubCount,
           );
 
+          episodesData.whenData((episodes) {
+            if (_episodes.isEmpty || _episodes.length != episodes.length) {
+              _episodes = List.from(episodes);
+            }
+          });
+
           return SafeArea(
             child: SizedBox(
               height: size.height,
@@ -870,128 +967,136 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                     ),
                     SizedBox(height: 8),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        GestureDetector(
-                          onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    EpisodesPage(anime: _anime!),
-                              ),
-                            );
-                            setState(() {
-                              _isFavorite = FavoritesBoxFunctions.isFavorite(
-                                widget.animeSlug,
-                              );
-                            });
-                          },
-                          child: Container(
-                            // width: size.width,
-                            padding: EdgeInsets.all(12),
-                            margin: EdgeInsets.symmetric(horizontal: 15),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(15),
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppTheme.gradient1,
-                                  AppTheme.gradient2,
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: _handleWatchNow,
+                            child: Container(
+                              padding: EdgeInsets.all(8),
+                              margin: EdgeInsets.symmetric(horizontal: 15),
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(15),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppTheme.gradient1,
+                                    AppTheme.gradient2,
+                                  ],
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.gradient1.withValues(
+                                      alpha: 0.2,
+                                    ),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 2),
+                                  ),
                                 ],
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.gradient1.withValues(
-                                    alpha: 0.2,
-                                  ),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.play_arrow_rounded,
-                                  color: AppTheme.whiteGradient,
-                                  size: 24,
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Watch Now',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.play_arrow_rounded,
                                     color: AppTheme.whiteGradient,
+                                    size: 24,
                                   ),
-                                ),
-                              ],
+                                  SizedBox(width: 8),
+                                  Column(
+                                    children: [
+                                      Text(
+                                        'Watch Now',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.whiteGradient,
+                                        ),
+                                      ),
+                                      ValueListenableBuilder(
+                                        valueListenable: Hive.box(
+                                          'library',
+                                        ).listenable(keys: ['lastWatched']),
+                                        builder: (context, box, child) {
+                                          final lastWatched =
+                                              LibraryBoxFunction.getLastWatchedEpisode(
+                                                widget.animeSlug,
+                                              );
+                                          return Text(
+                                            lastWatched != null
+                                                ? 'Episode $lastWatched'
+                                                : 'Start from Episode 1',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: AppTheme.whiteGradient
+                                                  .withValues(alpha: 0.8),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    EpisodesPage(anime: _anime!),
-                              ),
-                            );
-                            setState(() {
-                              _isFavorite = FavoritesBoxFunctions.isFavorite(
-                                widget.animeSlug,
+
+                        SizedBox(width: 10),
+
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      EpisodesPage(anime: _anime!),
+                                ),
                               );
-                            });
-                          },
-                          child: Container(
-                            // width: size.width,
-                            padding: EdgeInsets.all(12),
-                            margin: EdgeInsets.symmetric(horizontal: 15),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(15),
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppTheme.gradient1,
-                                  AppTheme.gradient2,
+                              setState(() {
+                                _isFavorite = FavoritesBoxFunctions.isFavorite(
+                                  widget.animeSlug,
+                                );
+                              });
+                            },
+                            child: Container(
+                              padding: EdgeInsets.all(12),
+                              margin: EdgeInsets.symmetric(horizontal: 15),
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(
+                                  color: AppTheme.gradient1,
+                                  width: 2,
+                                ),
+                                color: Colors.transparent,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.list,
+                                    color: AppTheme.gradient1,
+                                    size: 24,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'All Episodes',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.gradient1,
+                                    ),
+                                  ),
                                 ],
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.gradient1.withValues(
-                                    alpha: 0.2,
-                                  ),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.list,
-                                  color: AppTheme.whiteGradient,
-                                  size: 24,
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'List All Episodes',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.whiteGradient,
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
                         ),
                       ],
                     ),
+
                     SizedBox(height: 18),
                     Container(
                       height: 50,

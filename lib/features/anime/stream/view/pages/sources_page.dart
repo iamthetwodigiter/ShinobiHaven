@@ -18,21 +18,22 @@ class SourcesPage extends ConsumerStatefulWidget {
   final Anime anime;
   final List<Episodes> episodes;
   final Episodes currentEpisode;
-  final String? serverID; // Add optional serverID parameter
+  final String? serverID;
 
   const SourcesPage({
     super.key,
     required this.anime,
     required this.episodes,
     required this.currentEpisode,
-    this.serverID, // Make it optional
+    this.serverID,
   });
 
   @override
   ConsumerState<SourcesPage> createState() => _SourcesPageState();
 }
 
-class _SourcesPageState extends ConsumerState<SourcesPage> {
+class _SourcesPageState extends ConsumerState<SourcesPage>
+    with WidgetsBindingObserver {
   BetterPlayerController? _betterPlayerController;
   String? _videoURL;
   bool _videoReady = false;
@@ -48,17 +49,40 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
   bool _isLoadingSources = false;
   bool _isLoadingVidSrc = false;
   String _loadingMessage = '';
+  bool _isDisposing = false; // Add flag to prevent multiple disposals
+  Timer? _initializationTimer; // Add timer reference
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // Add lifecycle observer
     _currentPlayingEpisode = widget.currentEpisode;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadServersAndStream();
     });
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Handle app lifecycle changes
+    if (_betterPlayerController != null) {
+      switch (state) {
+        case AppLifecycleState.paused:
+        case AppLifecycleState.inactive:
+          _betterPlayerController?.pause();
+          break;
+        case AppLifecycleState.detached:
+          _forceDisposePlayer();
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
   void _loadServersAndStream() async {
+    if (_isDisposing) return;
+
     setState(() {
       _isLoadingNewEpisode = true;
       _hasError = false;
@@ -67,10 +91,11 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
     });
 
     try {
-      // Load servers for the current episode
       await ref
           .read(serversViewModelProvider.notifier)
           .fetchServers(_currentPlayingEpisode!.episodeID);
+
+      if (_isDisposing) return;
 
       setState(() {
         _isLoadingServers = false;
@@ -82,7 +107,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
       if (serversState.hasValue) {
         final servers = serversState.value!;
 
-        // Get all MegaCloud servers (both sub and dub)
         final filteredSubServers = servers.sub
             .where((server) => server.serverName == 'MegaCloud')
             .toList();
@@ -93,7 +117,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
         _availableServers = [...filteredSubServers, ...filteredDubServers];
 
         if (_availableServers.isNotEmpty) {
-          // If serverID is provided, use that server, otherwise use the first one
           if (widget.serverID != null) {
             _currentServer = _availableServers.firstWhere(
               (server) => server.dataID == widget.serverID,
@@ -105,26 +128,32 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
 
           await _loadStreamForServer(_currentServer!);
         } else {
-          setState(() {
-            _hasError = true;
-            _errorMessage = 'No compatible servers found';
-            _isLoadingNewEpisode = false;
-          });
+          if (mounted && !_isDisposing) {
+            setState(() {
+              _hasError = true;
+              _errorMessage = 'No compatible servers found';
+              _isLoadingNewEpisode = false;
+            });
+          }
         }
       }
     } catch (e) {
-      setState(() {
-        _hasError = true;
-        _errorMessage = 'Failed to load servers: $e';
-        _isLoadingNewEpisode = false;
-        _isLoadingServers = false;
-        _isLoadingSources = false;
-        _isLoadingVidSrc = false;
-      });
+      if (mounted && !_isDisposing) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = 'Failed to load servers: $e';
+          _isLoadingNewEpisode = false;
+          _isLoadingServers = false;
+          _isLoadingSources = false;
+          _isLoadingVidSrc = false;
+        });
+      }
     }
   }
 
   Future<void> _loadStreamForServer(Server server) async {
+    if (_isDisposing) return;
+
     try {
       setState(() {
         _currentServer = server;
@@ -132,12 +161,13 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
         _loadingMessage = 'Loading video sources for ${server.serverName}...';
       });
 
-      // Clear previous provider state
       ref.invalidate(vidSrcSourcesProvider);
 
       await ref
           .read(sourcesViewModelProvider.notifier)
           .getSources(server.dataID);
+
+      if (_isDisposing) return;
 
       setState(() {
         _isLoadingSources = false;
@@ -148,49 +178,47 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
       final sourcesState = ref.read(sourcesViewModelProvider);
 
       if (sourcesState.hasError) {
-        setState(() {
-          _hasError = true;
-          _errorMessage = 'Failed to load video sources for this server';
-          _isLoadingNewEpisode = false;
-          _isLoadingVidSrc = false;
-        });
+        if (mounted && !_isDisposing) {
+          setState(() {
+            _hasError = true;
+            _errorMessage = 'Failed to load video sources for this server';
+            _isLoadingNewEpisode = false;
+            _isLoadingVidSrc = false;
+          });
+        }
         return;
       }
 
       final sources = sourcesState.value;
       if (sources != null) {
-        print(
-          'DEBUG: Calling getVidSrcSources with dataID: ${sources.dataID}, key: ${sources.key}',
-        );
-
         await ref
             .read(vidSrcSourcesProvider.notifier)
             .getVidSrcSources(sources.dataID, sources.key);
 
-        // Add a small delay to ensure provider state updates
         await Future.delayed(Duration(milliseconds: 500));
 
-        final vidSrcState = ref.read(vidSrcSourcesProvider);
-        print(
-          'DEBUG: VidSrc state after call - hasValue: ${vidSrcState.hasValue}, hasError: ${vidSrcState.hasError}',
-        );
+        // final vidSrcState = ref.read(vidSrcSourcesProvider);
       } else {
         throw Exception('Sources data is null');
       }
 
-      setState(() {
-        _isLoadingVidSrc = false;
-        _isLoadingNewEpisode = false;
-        _loadingMessage = 'Initializing player...';
-      });
+      if (mounted && !_isDisposing) {
+        setState(() {
+          _isLoadingVidSrc = false;
+          _isLoadingNewEpisode = false;
+          _loadingMessage = 'Initializing player...';
+        });
+      }
     } catch (e) {
-      setState(() {
-        _hasError = true;
-        _errorMessage = 'Network error: ${e.toString()}';
-        _isLoadingNewEpisode = false;
-        _isLoadingSources = false;
-        _isLoadingVidSrc = false;
-      });
+      if (mounted && !_isDisposing) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = 'Network error: ${e.toString()}';
+          _isLoadingNewEpisode = false;
+          _isLoadingSources = false;
+          _isLoadingVidSrc = false;
+        });
+      }
     }
   }
 
@@ -198,28 +226,15 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
     String videoUrl,
     List<Captions> captions,
   ) async {
-    try {
-      print('DEBUG: Setting up player with URL: $videoUrl');
+    if (_isDisposing) return;
 
-      // Validate URL first
+    try {
       if (!videoUrl.startsWith('http') || !videoUrl.contains('m3u8')) {
         throw Exception('Invalid video URL format');
       }
-
       _availableSubtitles = captions;
-
-      // Dispose previous controller properly
-      if (_betterPlayerController != null) {
-        print('DEBUG: Disposing previous controller');
-        await _betterPlayerController!.pause();
-        _betterPlayerController!.dispose();
-        _betterPlayerController = null;
-        await Future.delayed(Duration(milliseconds: 300));
-      }
-
-      print('DEBUG: Creating new BetterPlayerController');
-
-      // Simplified data source configuration
+      _forceDisposePlayer();
+      if (_isDisposing) return;
       final dataSource = BetterPlayerDataSource(
         BetterPlayerDataSourceType.network,
         videoUrl,
@@ -233,27 +248,17 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
         videoFormat: BetterPlayerVideoFormat.hls,
         useAsmsSubtitles: true,
         useAsmsTracks: true,
-        // Remove resolutions for now to simplify
       );
 
-      // Simplified BetterPlayer configuration
       _betterPlayerController = BetterPlayerController(
         BetterPlayerConfiguration(
           autoPlay: true,
           looping: false,
           fit: BoxFit.contain,
           aspectRatio: 16 / 9,
-          handleLifecycle: true,
-          autoDispose: false, // Disable auto dispose to prevent issues
-          // Simplified buffering configuration
-          // bufferingConfiguration: BetterPlayerBufferingConfiguration(
-          //   minBufferMs: 15000,
-          //   maxBufferMs: 50000,
-          //   bufferForPlaybackMs: 2500,
-          //   bufferForPlaybackAfterRebufferMs: 5000,
-          // ),
+          handleLifecycle: false,
+          autoDispose: false,
 
-          // Simplified controls
           controlsConfiguration: BetterPlayerControlsConfiguration(
             playerTheme: BetterPlayerTheme.cupertino,
             showControls: true,
@@ -266,7 +271,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
             enableSubtitles: true,
             enableRetry: true,
 
-            // Styling
             progressBarPlayedColor: AppTheme.gradient1,
             progressBarHandleColor: AppTheme.gradient1,
             progressBarBufferedColor: AppTheme.gradient1.withValues(alpha: 0.3),
@@ -281,7 +285,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
             backwardSkipTimeInMilliseconds: 10000,
           ),
 
-          // Simplified subtitles
           subtitlesConfiguration: BetterPlayerSubtitlesConfiguration(
             fontSize: 16,
             fontColor: AppTheme.whiteGradient,
@@ -290,16 +293,14 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
             outlineSize: 2,
           ),
 
-          // Enhanced event listener
           eventListener: (BetterPlayerEvent event) {
-            print('DEBUG: BetterPlayer Event: ${event.betterPlayerEventType}');
-
+            if (_isDisposing) return;
             if (!mounted) return;
 
             switch (event.betterPlayerEventType) {
               case BetterPlayerEventType.initialized:
-                print('DEBUG: Player initialized successfully');
-                if (mounted) {
+                _cancelInitializationTimer();
+                if (mounted && !_isDisposing) {
                   setState(() {
                     _videoReady = true;
                     _hasError = false;
@@ -310,19 +311,22 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
                 break;
 
               case BetterPlayerEventType.play:
-                print('DEBUG: Player started playing');
                 _enableWakelock();
+                if (_currentPlayingEpisode != null) {
+                  LibraryBoxFunction.markLastWatchedEpisode(
+                    widget.anime.slug,
+                    _currentPlayingEpisode!.episodeNumber,
+                  );
+                }
                 break;
 
               case BetterPlayerEventType.finished:
-                print('DEBUG: Player finished');
                 _disableWakelock();
                 _playNextEpisode();
                 break;
 
               case BetterPlayerEventType.exception:
-                print('DEBUG: Player exception: ${event.parameters}');
-                if (mounted) {
+                if (mounted && !_isDisposing) {
                   setState(() {
                     _hasError = true;
                     _errorMessage =
@@ -330,17 +334,8 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
                     _isLoadingNewEpisode = false;
                   });
                   _disableWakelock();
-                  // Auto try next server on exception
                   _tryNextServerOnError();
                 }
-                break;
-
-              case BetterPlayerEventType.bufferingStart:
-                print('DEBUG: Buffering started');
-                break;
-
-              case BetterPlayerEventType.bufferingEnd:
-                print('DEBUG: Buffering ended');
                 break;
 
               default:
@@ -351,23 +346,10 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
         betterPlayerDataSource: dataSource,
       );
 
-      // Reduced timeout and add retry mechanism
-      Timer(Duration(seconds: 15), () {
-        if (mounted &&
-            !_videoReady &&
-            !_hasError &&
-            _betterPlayerController != null) {
-          print(
-            'DEBUG: Player initialization timeout - trying alternative approach',
-          );
-          _handleInitializationTimeout();
-        }
-      });
-
-      print('DEBUG: BetterPlayerController created successfully');
+      // Set initialization timeout
+      _setInitializationTimer();
     } catch (e) {
-      print('DEBUG: Error in _setupBetterPlayer: $e');
-      if (mounted) {
+      if (mounted && !_isDisposing) {
         setState(() {
           _hasError = true;
           _errorMessage = 'Failed to setup video player. Trying next server...';
@@ -378,33 +360,41 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
     }
   }
 
-  // Add these helper methods:
-  void _handleInitializationTimeout() {
-    print('DEBUG: Handling initialization timeout');
-    if (_betterPlayerController != null) {
-      _betterPlayerController!.dispose();
-      _betterPlayerController = null;
-    }
-
-    setState(() {
-      _hasError = true;
-      _errorMessage = 'Video initialization timed out. Trying next server...';
-      _isLoadingNewEpisode = false;
+  void _setInitializationTimer() {
+    _cancelInitializationTimer();
+    _initializationTimer = Timer(Duration(seconds: 15), () {
+      if (mounted && !_videoReady && !_hasError && !_isDisposing) {
+        _handleInitializationTimeout();
+      }
     });
+  }
 
-    _tryNextServerOnError();
+  void _cancelInitializationTimer() {
+    _initializationTimer?.cancel();
+    _initializationTimer = null;
+  }
+
+  void _handleInitializationTimeout() {
+    _forceDisposePlayer();
+
+    if (mounted && !_isDisposing) {
+      setState(() {
+        _hasError = true;
+        _errorMessage = 'Video initialization timed out. Trying next server...';
+        _isLoadingNewEpisode = false;
+      });
+      _tryNextServerOnError();
+    }
   }
 
   void _tryNextServerOnError() {
-    if (_availableServers.length > 1) {
+    if (_availableServers.length > 1 && !_isDisposing) {
       final currentIndex = _availableServers.indexOf(_currentServer!);
       final nextIndex = (currentIndex + 1) % _availableServers.length;
 
-      // Don't try the same server again
       if (nextIndex != currentIndex) {
-        print('DEBUG: Auto-switching to next server');
         Future.delayed(Duration(seconds: 2), () {
-          if (mounted) {
+          if (mounted && !_isDisposing) {
             _switchServer(_availableServers[nextIndex]);
           }
         });
@@ -413,6 +403,8 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
   }
 
   void _playNextEpisode() {
+    if (_isDisposing) return;
+
     final currentIndex = widget.episodes.indexOf(_currentPlayingEpisode!);
     if (currentIndex < widget.episodes.length - 1) {
       final nextEpisode = widget.episodes[currentIndex + 1];
@@ -421,7 +413,10 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
   }
 
   void _playEpisode(Episodes episode) {
-    if (_currentPlayingEpisode?.episodeID == episode.episodeID) return;
+    if (_currentPlayingEpisode?.episodeID == episode.episodeID ||
+        _isDisposing) {
+      return;
+    }
 
     setState(() {
       _currentPlayingEpisode = episode;
@@ -429,35 +424,99 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
       _videoURL = null;
     });
 
-    // Add to library
     LibraryBoxFunction.addToLibrary(widget.anime, episode.episodeID);
+    LibraryBoxFunction.markLastWatchedEpisode(
+      widget.anime.slug,
+      episode.episodeNumber,
+    );
 
-    // Load servers and stream for new episode
     _loadServersAndStream();
   }
 
   void _switchServer(Server server) {
-    if (_currentServer?.dataID == server.dataID) return;
-
-    print(
-      'DEBUG: Switching to server: ${server.serverName} (${server.dataID})',
-    );
+    if (_currentServer?.dataID == server.dataID || _isDisposing) return;
 
     setState(() {
       _videoReady = false;
       _videoURL = null;
-      _hasError = false; // Reset error state
+      _hasError = false;
     });
 
     _loadStreamForServer(server);
   }
 
   void _enableWakelock() async {
-    await WakelockPlus.enable();
+    try {
+      await WakelockPlus.enable();
+    } catch (_) {}
   }
 
   void _disableWakelock() async {
-    await WakelockPlus.disable();
+    try {
+      await WakelockPlus.disable();
+    } catch (_) {}
+  }
+
+  void _forceDisposePlayer() {
+    if (_betterPlayerController != null) {
+      try {
+        _betterPlayerController!.pause();
+        _betterPlayerController!.setVolume(0.0);
+        _betterPlayerController!.dispose();
+      } catch (_) {
+      } finally {
+        _betterPlayerController = null;
+      }
+    }
+
+    _cancelInitializationTimer();
+  }
+
+  Future<void> _stopAndDisposePlayer() async {
+    if (_isDisposing) return;
+    _isDisposing = true;
+    try {
+      _cancelInitializationTimer();
+
+      if (_betterPlayerController != null) {
+        try {
+          await _betterPlayerController!.pause();
+          _betterPlayerController!.setVolume(0.0);
+        } catch (_) {}
+
+        await Future.delayed(Duration(milliseconds: 100));
+
+        try {
+          _betterPlayerController!.dispose();
+        } catch (_) {}
+
+        _betterPlayerController = null;
+      }
+
+      _disableWakelock();
+
+      if (mounted) {
+        setState(() {
+          _videoReady = false;
+          _videoURL = null;
+        });
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _isDisposing = true;
+    _forceDisposePlayer();
+    _disableWakelock();
+
+    try {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    } catch (_) {}
+
+    super.dispose();
   }
 
   void _showEpisodeInfo() {
@@ -560,7 +619,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: _betterPlayerController != null && _videoReady
+        child: _betterPlayerController != null && _videoReady && !_isDisposing
             ? BetterPlayer(controller: _betterPlayerController!)
             : Container(
                 color: AppTheme.primaryBlack,
@@ -599,6 +658,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
     );
   }
 
+  // Rest of your UI building methods remain the same...
   Widget _buildServersList() {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 15),
@@ -616,8 +676,8 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
               ),
             ),
           ),
-          Container(
-            height: 80, // Increased height to show server type
+          SizedBox(
+            height: 80,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: _availableServers.length,
@@ -761,40 +821,18 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
     );
   }
 
-  Future<void> _stopAndDisposePlayer() async {
-    if (_betterPlayerController != null) {
-      await _betterPlayerController!.pause();
-      _betterPlayerController!.dispose();
-      _betterPlayerController = null;
-    }
-    _disableWakelock();
-  }
-
-  @override
-  void dispose() {
-    _stopAndDisposePlayer();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
+    if (_isDisposing) {
+      return Scaffold(
+        backgroundColor: AppTheme.primaryBlack,
+        body: Center(
+          child: CircularProgressIndicator(color: AppTheme.gradient1),
+        ),
+      );
+    }
+
     final vidSrcSource = ref.watch(vidSrcSourcesProvider);
-
-    // Add debug logging for provider state
-    print(
-      'DEBUG: Provider state - hasValue: ${vidSrcSource.hasValue}, hasError: ${vidSrcSource.hasError}, isLoading: ${vidSrcSource.isLoading}',
-    );
-
-    if (vidSrcSource.hasValue) {
-      print('DEBUG: Provider has value: ${vidSrcSource.value}');
-    }
-
-    if (vidSrcSource.hasError) {
-      print('DEBUG: Provider has error: ${vidSrcSource.error}');
-    }
-
     if (_hasError) {
       return Scaffold(
         backgroundColor: AppTheme.primaryBlack,
@@ -808,7 +846,9 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
             icon: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
             onPressed: () {
               _stopAndDisposePlayer();
-              Navigator.pop(context);
+              if (mounted) {
+                Navigator.pop(context);
+              }
             },
           ),
         ),
@@ -846,8 +886,8 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
                     _hasError = false;
                     _errorMessage = null;
                     _videoReady = false;
+                    _isDisposing = false;
                   });
-                  // Clear the provider state
                   ref.invalidate(vidSrcSourcesProvider);
                   _loadServersAndStream();
                 },
@@ -863,9 +903,11 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (bool didPop, Object? result) {
-        if (!didPop) {
+        if (!didPop && !_isDisposing) {
           _stopAndDisposePlayer();
-          Navigator.pop(context);
+          if (mounted) {
+            Navigator.pop(context);
+          }
         }
       },
       child: Scaffold(
@@ -880,43 +922,20 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
           leading: IconButton(
             icon: Icon(Icons.arrow_back_ios, color: AppTheme.whiteGradient),
             onPressed: () {
-              _stopAndDisposePlayer();
-              Navigator.pop(context);
+              if (!_isDisposing) {
+                _stopAndDisposePlayer();
+                if (mounted) {
+                  Navigator.pop(context);
+                }
+              }
             },
           ),
           actions: [
-            if (_videoReady)
+            if (_videoReady && !_isDisposing)
               IconButton(
                 icon: Icon(Icons.info_outline, color: AppTheme.whiteGradient),
                 onPressed: _showEpisodeInfo,
               ),
-            // Add debug info button
-            if (_currentServer != null)
-              IconButton(
-                icon: Icon(Icons.bug_report, color: AppTheme.whiteGradient),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Current Server: ${_currentServer!.serverName} (${_currentServer!.type}) - ID: ${_currentServer!.dataID}\nProvider State: hasValue=${vidSrcSource.hasValue}, hasError=${vidSrcSource.hasError}, isLoading=${vidSrcSource.isLoading}',
-                      ),
-                      duration: Duration(seconds: 5),
-                    ),
-                  );
-                },
-              ),
-            // Add force refresh button
-            IconButton(
-              icon: Icon(Icons.refresh, color: AppTheme.whiteGradient),
-              onPressed: () {
-                print('DEBUG: Force refreshing provider');
-                ref.invalidate(vidSrcSourcesProvider);
-                setState(() {
-                  _videoReady = false;
-                  _videoURL = null;
-                });
-              },
-            ),
           ],
         ),
         body: SafeArea(
@@ -925,8 +944,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Progress indicator with steps
-                      Container(
+                      SizedBox(
                         width: 250,
                         child: Column(
                           children: [
@@ -987,28 +1005,21 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
                 )
               : Builder(
                   builder: (context) {
-                    // Use Builder to handle provider state properly
                     if (vidSrcSource.hasValue && vidSrcSource.value != null) {
                       final stream = vidSrcSource.value!;
-                      print(
-                        'DEBUG: Building UI with stream data: ${stream.sources.length} sources',
-                      );
-
                       _availableQualities = stream.sources;
 
-                      // Only setup player if URL changed and video is not ready
                       if (_videoURL != stream.sources.first.fileURL &&
-                          !_videoReady) {
+                          !_videoReady &&
+                          !_isDisposing) {
                         _videoURL = stream.sources.first.fileURL;
-                        print(
-                          'DEBUG: Setting up player with new URL: $_videoURL',
-                        );
                         WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _setupBetterPlayer(_videoURL!, stream.captions);
+                          if (!_isDisposing) {
+                            _setupBetterPlayer(_videoURL!, stream.captions);
+                          }
                         });
                       }
 
-                      // Show the UI
                       return SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1026,7 +1037,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
                         ),
                       );
                     } else if (vidSrcSource.hasError) {
-                      print('DEBUG: VidSrc error: ${vidSrcSource.error}');
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -1045,75 +1055,23 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            SizedBox(height: 8),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 32),
-                              child: Text(
-                                'Error: ${vidSrcSource.error.toString()}',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: AppTheme.whiteGradient,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            if (_currentServer != null)
-                              Text(
-                                'Server: ${_currentServer!.serverName} (${_currentServer!.dataID})',
-                                style: TextStyle(
-                                  color: AppTheme.whiteGradient.withValues(
-                                    alpha: 0.7,
-                                  ),
-                                  fontSize: 12,
-                                ),
-                              ),
                             SizedBox(height: 24),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.gradient1,
-                                    foregroundColor: AppTheme.whiteGradient,
-                                  ),
-                                  onPressed: () {
-                                    ref.invalidate(vidSrcSourcesProvider);
-                                    _loadServersAndStream();
-                                  },
-                                  icon: Icon(Icons.refresh),
-                                  label: Text('Retry'),
-                                ),
-                                if (_availableServers.length > 1) ...[
-                                  SizedBox(width: 16),
-                                  ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.gradient2,
-                                      foregroundColor: AppTheme.whiteGradient,
-                                    ),
-                                    onPressed: () {
-                                      // Try next server
-                                      final currentIndex = _availableServers
-                                          .indexOf(_currentServer!);
-                                      final nextIndex =
-                                          (currentIndex + 1) %
-                                          _availableServers.length;
-                                      _switchServer(
-                                        _availableServers[nextIndex],
-                                      );
-                                    },
-                                    icon: Icon(Icons.skip_next),
-                                    label: Text('Try Next Server'),
-                                  ),
-                                ],
-                              ],
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.gradient1,
+                                foregroundColor: AppTheme.whiteGradient,
+                              ),
+                              onPressed: () {
+                                ref.invalidate(vidSrcSourcesProvider);
+                                _loadServersAndStream();
+                              },
+                              icon: Icon(Icons.refresh),
+                              label: Text('Retry'),
                             ),
                           ],
                         ),
                       );
                     } else {
-                      // Still loading or no data
-                      print('DEBUG: VidSrc still loading or no data...');
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -1144,27 +1102,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
                                 ),
                               ),
                             ),
-                            SizedBox(height: 16),
-                            Text(
-                              'Provider State: ${vidSrcSource.isLoading ? "Loading" : "Unknown"}',
-                              style: TextStyle(
-                                color: AppTheme.whiteGradient.withValues(
-                                  alpha: 0.7,
-                                ),
-                                fontSize: 12,
-                              ),
-                            ),
-                            SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: () {
-                                print(
-                                  'DEBUG: Manual provider refresh triggered',
-                                );
-                                ref.invalidate(vidSrcSourcesProvider);
-                                setState(() {});
-                              },
-                              child: Text('Force Refresh'),
-                            ),
                           ],
                         ),
                       );
@@ -1178,6 +1115,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage> {
 
   Widget _buildLoadingStep(String label, bool isActive, bool isCompleted) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
           width: 20,
