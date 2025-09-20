@@ -103,6 +103,7 @@ class _LandingPageState extends State<LandingPage> {
                           ? data['title'].toString()
                           : entries[i].key;
                       final version = entries[i].key;
+                      final date = data['date'];
                       final notes = (data is Map && data['notes'] is List)
                           ? List<String>.from(data['notes'])
                           : <String>[];
@@ -113,7 +114,14 @@ class _LandingPageState extends State<LandingPage> {
                           Text(
                             '🟢 $title [$version]',
                             style: TextStyle(
-                              fontSize: 18,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            '🗓️ Released on: ${date ?? 'TO BE RELEASED'}',
+                            style: TextStyle(
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
