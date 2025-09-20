@@ -9,6 +9,10 @@ class LibraryBoxFunction {
 
   static Box get _libraryBox => Hive.box('library');
 
+  static void clearLibrary() {
+    _libraryBox.clear();
+  }
+
   static String? getLastWatchedEpisode(String animeSlug) {
     final lastWatchedMap = _libraryBox.get('lastWatched');
     if (lastWatchedMap is Map) {
@@ -421,16 +425,6 @@ class LibraryBoxFunction {
       map.remove(collectionName);
     }
     _saveCollectionsMap(map);
-  }
-
-  static void clearLibrary() {
-    final list = _getLibraryList();
-    for (final map in list) {
-      for (final key in map.keys) {
-        if (_libraryBox.containsKey(key)) _libraryBox.delete(key);
-      }
-    }
-    _libraryBox.delete('library_list');
   }
 
   static List<String> libraryBoxKeys() {

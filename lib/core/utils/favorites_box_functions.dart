@@ -25,4 +25,8 @@ class FavoritesBoxFunctions {
   static List<Anime> listFavorites() {
     return _favoritesBox.values.whereType<Anime>().toList();
   }
+
+  static void clearFavorites() {
+    _favoritesBox.clear();
+  }
 }

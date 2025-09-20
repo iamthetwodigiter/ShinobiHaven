@@ -1,15 +1,20 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:restart_app/restart_app.dart';
 import 'package:shinobihaven/core/constants/app_details.dart';
 import 'package:shinobihaven/core/constants/privacy_policy.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/core/theme/theme_provider.dart';
+import 'package:shinobihaven/core/utils/favorites_box_functions.dart';
 import 'package:shinobihaven/core/utils/library_box_functions.dart';
+import 'package:shinobihaven/core/utils/search_history_box_function.dart';
 import 'package:shinobihaven/core/utils/toast.dart';
+import 'package:shinobihaven/core/utils/update_checker.dart';
 import 'package:shinobihaven/core/utils/user_box_functions.dart';
 import 'package:shinobihaven/core/widgets/theme_choice.dart';
 import 'package:shinobihaven/features/anime/common/model/anime.dart';
@@ -58,13 +63,18 @@ class _ProfilePageState extends State<ProfilePage> {
         mode: LaunchMode.platformDefault,
       );
     } catch (_) {
-      Toast(
-        // ignore: use_build_context_synchronously
-        context: context,
-        title: 'Loading Error',
-        description: 'Failed to load project repo. Try again later',
-      );
+      if (mounted) {
+        Toast(
+          context: context,
+          title: 'Loading Error',
+          description: 'Failed to load project repo. Try again later',
+        );
+      }
     }
+  }
+
+  void _checkForUpdates() async {
+    await UpdateChecker.checkForUpdates(context);
   }
 
   Widget _listTile(
@@ -172,6 +182,16 @@ class _ProfilePageState extends State<ProfilePage> {
               },
             ),
             _listTile(
+              "Manage App Data",
+              Icons.storage,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ManageAppData()),
+                );
+              },
+            ),
+            _listTile(
               'Privacy Policy',
               Icons.privacy_tip_rounded,
               onPressed: () {
@@ -198,6 +218,11 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 );
               },
+            ),
+            _listTile(
+              'Check for updates',
+              Icons.system_update_sharp,
+              onPressed: _checkForUpdates,
             ),
             _listTile(
               'Want to contribute to the project?',
@@ -414,8 +439,6 @@ class _EditProfileState extends ConsumerState<EditProfile> {
                             style: TextStyle(fontSize: 18),
                           ),
                           SizedBox(
-                            // height: size.height * 0.5,
-                            // width: size.width,
                             child: SingleChildScrollView(
                               child: Wrap(
                                 alignment: WrapAlignment.spaceEvenly,
@@ -1152,7 +1175,6 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
           'Privacy Policy',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        actionsPadding: EdgeInsets.only(right: 10),
       ),
       body: SafeArea(
         child: Markdown(
@@ -1191,7 +1213,7 @@ class ChangelogPage extends StatelessWidget {
     entries.sort((a, b) {
       final ra = rank(a.key);
       final rb = rank(b.key);
-      return rb.compareTo(ra); // descending
+      return rb.compareTo(ra);
     });
 
     return entries;
@@ -1204,6 +1226,12 @@ class ChangelogPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: InkWell(
+          onTap: () {
+            Navigator.pop(context);
+          },
+          child: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
+        ),
         title: Text('Changelog', style: TextStyle(fontWeight: FontWeight.bold)),
         elevation: 0,
       ),
@@ -1227,7 +1255,6 @@ class ChangelogPage extends StatelessWidget {
                   : <String>[];
 
               return Card(
-                // color: AppTheme.blackGradient.withAlpha(28),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -1336,6 +1363,349 @@ class ChangelogPage extends StatelessWidget {
                 ),
               );
             },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ManageAppData extends StatefulWidget {
+  const ManageAppData({super.key});
+
+  @override
+  State<ManageAppData> createState() => _ManageAppDataState();
+}
+
+class _ManageAppDataState extends State<ManageAppData> {
+  bool _isBackingUp = false;
+  bool _isRestoring = false;
+
+  void _clearData() {
+    showAdaptiveDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog.adaptive(
+          title: Text(
+            'Are you sure to delete app data?',
+            style: TextStyle(fontSize: 18),
+          ),
+          content: Text(
+            'This will delete animes added in the library collections, favorites, your watch history and search history.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: AppTheme.gradient1,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: AppTheme.gradient1,
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                LibraryBoxFunction.clearLibrary();
+                FavoritesBoxFunctions.clearFavorites();
+                SearchHistoryBoxFunction.clearHistory();
+                Toast(
+                  context: context,
+                  title: 'Data Cleared',
+                  description: 'All app data has been cleared successfully',
+                  type: ToastificationType.success,
+                );
+                Navigator.pop(context);
+              },
+              child: Text(
+                'Clear',
+                style: TextStyle(
+                  color: AppTheme.whiteGradient,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _backupData() async {
+    setState(() {
+      _isBackingUp = true;
+    });
+
+    try {
+      final backupPath = await UserBoxFunctions.backupAllData();
+
+      if (backupPath != null) {
+        if (mounted) {
+          final fileName = backupPath.split('/').last;
+          Toast(
+            context: context,
+            title: 'Backup Successful',
+            description: 'Data backed up successfully',
+            type: ToastificationType.success,
+          );
+
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text('Backup Created'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Your data has been successfully backed up!'),
+                  SizedBox(height: 12),
+                  Text(
+                    'File: $fileName',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Location: ${Platform.isAndroid ? 'Downloads folder' : 'Documents folder'}',
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Keep this file safe to restore your data later.',
+                    style: TextStyle(fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'OK',
+                    style: TextStyle(color: AppTheme.gradient1),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          Toast(
+            context: context,
+            title: 'Backup Failed',
+            description: 'Failed to create backup. Please check permissions.',
+            type: ToastificationType.error,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Toast(
+          context: context,
+          title: 'Backup Error',
+          description: 'An error occurred while creating backup',
+          type: ToastificationType.error,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isBackingUp = false;
+        });
+      }
+    }
+  }
+
+  void _restoreData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Restore from Backup'),
+        content: Text(
+          'This will replace ALL current data with data from the backup file. This action cannot be undone.\n\nMake sure you have selected the correct backup file.\n\nAre you sure you want to continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: TextStyle(color: AppTheme.gradient1)),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: AppTheme.gradient1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Restore',
+              style: TextStyle(color: AppTheme.whiteGradient),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isRestoring = true;
+    });
+
+    try {
+      final success = await UserBoxFunctions.restoreFromBackup();
+
+      if (success) {
+        if (mounted) {
+          Toast(
+            context: context,
+            title: 'Restore Successful',
+            description: 'Data has been restored from backup successfully',
+            type: ToastificationType.success,
+          );
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              title: Text('Restore Complete'),
+              content: Text(
+                'Your data has been successfully restored from the backup file!\n\nPlease restart the app for all changes to take effect properly.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Restart.restartApp();
+                    Navigator.pop(context);
+                  },
+                  child: Text(
+                    'OK',
+                    style: TextStyle(color: AppTheme.gradient1),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          Toast(
+            context: context,
+            title: 'Restore Failed',
+            description:
+                'Failed to restore from backup. Please check the file format.',
+            type: ToastificationType.error,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Toast(
+          context: context,
+          title: 'Restore Error',
+          description: 'An error occurred while restoring data',
+          type: ToastificationType.error,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRestoring = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: InkWell(
+          onTap: () {
+            Navigator.pop(context);
+          },
+          child: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
+        ),
+        title: Text(
+          'Manage App Data',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: SafeArea(
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 25),
+          child: Column(
+            spacing: 8,
+            children: [
+              SizedBox(height: 10),
+              ListTile(
+                tileColor: AppTheme.blackGradient,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadiusGeometry.circular(10),
+                ),
+                leading: _isBackingUp
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.gradient1,
+                        ),
+                      )
+                    : Icon(Icons.backup, size: 18, color: AppTheme.gradient1),
+                title: Text('Backup App Data'),
+                subtitle: Text('Save all your data to a file'),
+                trailing: _isBackingUp
+                    ? null
+                    : Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: _isBackingUp ? null : _backupData,
+              ),
+              ListTile(
+                tileColor: AppTheme.blackGradient,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadiusGeometry.circular(10),
+                ),
+                leading: _isRestoring
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.gradient1,
+                        ),
+                      )
+                    : Icon(Icons.restore, size: 18, color: AppTheme.gradient1),
+                title: Text('Restore from Backup'),
+                subtitle: Text('Load data from a backup file'),
+                trailing: _isRestoring
+                    ? null
+                    : Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: _isRestoring ? null : _restoreData,
+              ),
+              ListTile(
+                tileColor: AppTheme.blackGradient,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadiusGeometry.circular(10),
+                ),
+                leading: Icon(
+                  Icons.delete,
+                  size: 18,
+                  color: AppTheme.gradient1,
+                ),
+                title: Text('Clear App Data'),
+                subtitle: Text('Delete all local data'),
+                trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: _clearData,
+              ),
+            ],
           ),
         ),
       ),
