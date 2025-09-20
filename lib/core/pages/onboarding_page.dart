@@ -215,7 +215,6 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
                           _currentProfileChoice,
                         ),
                         hintStyle: TextStyle(
-                          // color: AppTheme.whiteGradient.withValues(alpha: 0.65),
                           fontSize: 16,
                         ),
                         labelText: 'Enter a Username',
@@ -237,7 +236,6 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
                   ),
                   Text('Choose a profile', style: TextStyle(fontSize: 18)),
                   SizedBox(
-                    // height: size.height * 0.5,
                     width: size.width,
                     child: SingleChildScrollView(
                       child: Wrap(
@@ -364,7 +362,7 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
           ),
         ),
         Container(
-          padding: EdgeInsets.symmetric(horizontal: 40),
+          padding: EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
