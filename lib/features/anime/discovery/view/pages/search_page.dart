@@ -7,6 +7,7 @@ import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/core/utils/search_history_box_function.dart';
 import 'package:shinobihaven/core/utils/user_box_functions.dart';
 import 'package:shinobihaven/features/anime/common/view/widgets/anime_card.dart';
+import 'package:shinobihaven/features/anime/details/view/pages/anime_details_page.dart';
 import 'package:shinobihaven/features/anime/discovery/dependency_injection/search_provider.dart';
 import 'package:shinobihaven/features/anime/discovery/view/pages/search_result_page.dart';
 
@@ -31,7 +32,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   );
 
   List _searchHistory = [];
-  bool _isSearching = false; // Add this to track search state
+  bool _isSearching = false;
 
   @override
   void initState() {
@@ -149,7 +150,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     context,
                     MaterialPageRoute(
                       builder: (context) =>
-                          SearchResultPage(query: anime.title),
+                          AnimeDetailsPage(animeSlug: anime.slug,),
                     ),
                   );
                 },
@@ -225,7 +226,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           style: TextStyle(fontSize: 16),
                           onChanged: (query) {
                             if (query.length > 2) {
-                              // Changed from 3 to 2 for better UX
                               _searchAnime(query);
                             } else {
                               setState(() {
@@ -279,7 +279,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         ),
                       ),
                       SizedBox(height: 30),
-                      // Only show history and suggestions when not searching
                       if (!_isSearching) ...[
                         Align(
                           alignment: Alignment.centerLeft,
@@ -501,7 +500,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     ],
                   ),
                 ),
-                // Show search results when searching
                 if (_isSearching) _buildSearchResults(),
               ],
             ),
