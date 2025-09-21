@@ -5,7 +5,7 @@ import 'package:shinobihaven/features/anime/episodes/viewmodel/servers_viewmode.
 
 final serversRepositoryProvider = Provider((ref) => ServersRepository());
 
-final serversViewModelProvider = StateNotifierProvider<ServersViewmode, AsyncValue<ServersData>>((ref) {
+final serversViewModelProvider = StateNotifierProvider.family<ServersViewmode, AsyncValue<ServersData>, String>((ref, animeSlug) {
   final serversRepository = ref.watch(serversRepositoryProvider);
   return ServersViewmode(serversRepository);
 });

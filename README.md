@@ -1,127 +1,155 @@
 # ShinobiHaven - Anime Streaming Mobile App
 
-A feature-rich Flutter application for anime discovery and streaming, built with feature based MVVM pattern, and modern development practices for a scalable, maintainable cross-platform solution.
+A feature-rich Flutter application for anime discovery and streaming, built with feature-based MVVM pattern and modern development practices for a scalable, maintainable cross-platform solution.
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.32.8-blue)
 ![Dart](https://img.shields.io/badge/Dart-3.8.1-blue)
 ![Platforms](https://img.shields.io/badge/Platforms-Android%20%7C%20iOS%20%7C%20Web-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Version](https://img.shields.io/badge/Version-v1.0.0-brightgreen)
+![Version](https://img.shields.io/badge/Version-v1.0.1-brightgreen)
 ![Downloads](https://img.shields.io/github/downloads/iamthetwodigiter/shinobihaven/total?label=Downloads&logo=GitHub)
 
 ## 📱 Overview
 
-ShinobiHaven is a comprehensive anime streaming application that provides users with a seamless experience for discovering, streaming, and managing their anime content. The app follows feature based MVVM pattern, ensuring maintainable and scalable code.
+ShinobiHaven is a comprehensive anime streaming application that provides users with a seamless experience for discovering, streaming, and managing their anime content. The app follows feature-based MVVM pattern with advanced update management, professional splash screens, and comprehensive data backup capabilities.
 
 ### Key Highlights
-- **Clean Architecture**: Feature-based MVVM architecture with clear separation of concerns
+- **Architecture**: Feature-based MVVM architecture with clear separation of concerns
 - **Modern State Management**: Riverpod for efficient state management and dependency injection
-- **Local Storage**: Hive database for offline-first approach
+- **Local Storage**: Hive database for offline-first approach with backup/restore functionality
 - **Cross-Platform**: Flutter for Android, iOS[To-Do], Web[To-Do], Windows[To-Do], Linux[To-Do] platforms
-- **Privacy-Focused**: Local data storage with no server-side user data collection
+- **Privacy-Focused**: Local data storage with comprehensive backup and restore capabilities
+- **Auto-Update System**: In-app update checker with notification support and automatic installation
+- **Professional UI**: Native splash screen implementation with proper scaling and theming
+- **Bug-Free Streaming**: Enhanced video player with fixed persistence issues and state management
+
+## 🚀 Latest Updates (v1.0.1)
+
+### 🐛 Critical Bug Fixes
+- **Fixed Video Player Persistence**: Resolved critical issue where videos from different anime would persist when switching between anime from the same section
+- **Enhanced State Management**: Improved provider state management to prevent cross-contamination of video sources
+- **Better Video Initialization**: Enhanced video player initialization with proper state validation and cleanup
+- **Memory Optimization**: Improved widget lifecycle management for better memory usage and stability
+- **Provider Cleanup**: Fixed provider disposal issues that caused "Bad state" errors during navigation
+
+### 🔧 Technical Improvements
+- **Section-Aware Caching**: Enhanced cache management to distinguish between different app sections (trending, recent, etc.)
+- **Timestamped Cache Keys**: Implemented unique cache keys to prevent data contamination between different anime
+- **Extended Cleanup Delays**: Added proper disposal timing to ensure complete state isolation
+- **Widget Recreation**: Force widget recreation for better state isolation between different anime
 
 ## 🏗️ Architecture
 
-### MVVM Architecture Pattern
+### Enhanced MVVM Architecture Pattern
 
 ```
 ┌─────────────────────────┐
-│      View Layer         │  ◄── UI Components, Pages, Widgets
+│       View Layer        │  ◄── UI Components, Pages, Widgets
 ├─────────────────────────┤
-│    ViewModel Layer      │  ◄── State Management, Business Logic
+│     ViewModel Layer     │  ◄── State Management, Business Logic
 ├─────────────────────────┤
-│      Model Layer        │  ◄── Data Models, Entities
+│       Model Layer       │  ◄── Data Models, Entities
 ├─────────────────────────┤
-│   Repository Layer      │  ◄── Data Sources, API Integration
+│     Repository Layer    │  ◄── Data Sources, API Integration
+├─────────────────────────┤
+│     Update Management   │  ◄── Version Control, Download Management
+├─────────────────────────┤
+│      Storage Layer      │  ◄── Local Storage, Backup/Restore
 └─────────────────────────┘
 ```
 
-### Project Structure
+### Enhanced Project Structure
 
 ```
 lib/
 ├── core/
-│   ├── constants/           # App constants, privacy policy
+│   ├── constants/           # App constants, privacy policy, changelog
 │   ├── pages/              # Core pages (onboarding, splash)
 │   ├── theme/              # App theming & styling
-│   └── utils/              # Utility functions, Hive helpers
+│   └── utils/              # Utilities, Hive helpers, update checker, notifications
 ├── features/               # Feature-based modules
 │   └── anime/
 │       ├── common/         # Shared anime components
-│       │   ├── model/      # Anime data models
-│       │   └── view/       # Shared UI components, profile page
-│       ├── details/        # Anime details feature
-│       │   ├── dependency_injection/
-│       │   ├── model/
-│       │   ├── repository/
-│       │   ├── view/
-│       │   └── viewmodel/
-│       ├── discovery/      # Search & browse feature
-│       ├── episodes/       # Episode management
-│       ├── home/           # Home dashboard
-│       └── stream/         # Video streaming
-└── main.dart              # Application entry point
+│       │   ├── model/      # Anime data models with Hive adapters
+│       │   └── view/       # Shared UI components, enhanced profile page
+│       ├── details/        # Anime details with streamlined navigation
+│       ├── discovery/      # Enhanced search & browse
+│       ├── episodes/       # Improved episode management
+│       ├── home/           # Home dashboard with better statistics
+│       └── stream/         # Optimized video streaming with fixed persistence
+└── main.dart              # Application entry point with splash integration
 ```
 
-Each feature follows the MVVM pattern:
+### New Core Components
 
 ```
-feature/
-├── dependency_injection/   # Riverpod providers
-├── model/                  # Data models
-├── repository/             # Data access layer
-├── view/                   # UI components & pages
-│   ├── pages/              # Feature screens
-│   └── widgets/            # Feature-specific widgets
-└── viewmodel/              # Business logic & state management
+core/utils/
+├── update_checker.dart     # GitHub release checking and update management
+├── notification_service.dart # Advanced notification system
+├── backup_manager.dart     # Data backup and restore functionality
+├── file_manager.dart       # File operations and storage management
+└── user_box_functions.dart # Enhanced user data management
 ```
 
-## 🔑 Key Features
+## 🔑 Enhanced Features
 
 ### Core Functionality
-- **Anime Discovery**: Browse trending, popular, and latest anime
-- **Advanced Search**: Filter by genre, status, year, and more
-- **Anime Details**: Comprehensive information with synopsis, characters, and ratings
-- **Episode Streaming**: Multi-server support with quality options
-- **Favorites Management**: Personal favorite anime collection
-- **Watch History**: Track viewing progress and resume watching
-- **Custom Collections**: Create and manage custom anime lists
+- **Anime Discovery**: Browse trending, popular, and latest anime with improved filtering
+- **Advanced Search**: Enhanced filter options with better performance
+- **Anime Details**: Comprehensive information with streamlined episode access
+- **Episode Streaming**: Multi-server support with improved video player management (v1.0.1 fixes)
+- **Smart Navigation**: Direct episode access with reduced navigation steps
+- **Favorites Management**: Enhanced favorite system with better organization
+- **Watch History**: Detailed tracking with automatic resume functionality
+- **Custom Collections**: Improved collection management with better UI
 
-### User Experience
-- **Onboarding Flow**: Guided setup with user preferences
-- **Profile Management**: Customizable user profiles with avatar selection
-- **Theme Support**: Dark/Light mode with system preference detection
-- **Responsive Design**: Optimized for mobile and web platforms
-- **Offline Support**: Local data storage for offline access
+### Advanced Features (v1.0.0+)
+- **Auto-Update System**: Complete update management with GitHub integration
+- **Data Backup/Restore**: Comprehensive backup system for all user data
+- **Notification Management**: Smart notification system with lifecycle management
+- **Professional Splash**: Native splash screen with proper scaling
+- **Enhanced Privacy**: Updated privacy policy with detailed data handling information
+- **Performance Optimization**: Better resource management and startup performance
 
-### Privacy & Security
-- **Local Storage**: All user data stored locally using Hive
-- **No Server Storage**: No personal data uploaded to servers
-- **Privacy Policy**: Comprehensive privacy policy with user consent
-- **Transparent Disclaimer**: Clear information about third-party content sources
+### Latest Bug Fixes (v1.0.1)
+- **Video Player Stability**: Fixed critical video persistence issues between different anime
+- **State Management**: Enhanced provider state management with proper cleanup
+- **Memory Management**: Improved widget lifecycle and memory usage
+- **Cross-Section Navigation**: Fixed video playback issues when switching between app sections
+- **Provider Disposal**: Resolved "Bad state" errors during navigation and provider disposal
+
+### User Experience Improvements
+- **Streamlined UI/UX**: Reduced navigation steps for common actions
+- **Better Feedback**: Enhanced error messages and user guidance
+- **Progress Tracking**: Real-time updates for all background operations
+- **Theme Integration**: Consistent dark mode theming throughout the app
+- **Accessibility**: Improved accessibility features and navigation
 
 ## 🛠️ Technical Implementation
 
-### State Management & Dependency Injection
-
-The application leverages **Riverpod** for efficient state management and dependency injection:
+### Enhanced State Management & Dependency Injection
 
 ```dart
-// Repository Provider
+// Enhanced Repository Provider with caching
 final animeDetailsRepositoryProvider = Provider((ref) => AnimeDetailsRepository());
 
-// ViewModel Provider with Dependencies
+// Section-aware ViewModel Provider
 final animeDetailsViewModelProvider = 
-    StateNotifierProvider<AnimeDetailsViewmodel, AsyncValue<AnimeDetails>>((ref) {
+    StateNotifierProvider.family<AnimeDetailsViewmodel, AsyncValue<AnimeDetails>, String>((ref, animeSlug) {
   final repository = ref.watch(animeDetailsRepositoryProvider);
-  return AnimeDetailsViewmodel(repository);
+  return AnimeDetailsViewmodel(repository, animeSlug);
 });
 
-// Usage in UI
+// Fixed Video Streaming Provider (v1.0.1)
+final sourcesViewModelProvider = StateNotifierProvider<SourcesViewmodel, AsyncValue<Sources>>((ref) {
+  return SourcesViewmodel();
+});
+
+// Usage in UI with proper disposal
 class AnimeDetailsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final animeDetails = ref.watch(animeDetailsViewModelProvider);
+    final animeDetails = ref.watch(animeDetailsViewModelProvider(widget.animeSlug));
     return animeDetails.when(
       data: (data) => AnimeDetailsView(data),
       loading: () => LoadingWidget(),
@@ -131,134 +159,111 @@ class AnimeDetailsPage extends ConsumerWidget {
 }
 ```
 
-### Local Storage with Hive
+### Advanced Update Management
 
-Hive is used for efficient local data storage across multiple boxes:
-
-#### Storage Structure
 ```dart
-// User Preferences
-'user' Box:
-├── firstSetup: bool          # Onboarding completion status
-├── installedVersion: String  # App version tracking
-├── darkMode: int             # Theme preference (0: Light, 1: Dark, 2: System)
-├── userName: String          # User display name
-└── userProfile: String       # Selected avatar/profile
+class UpdateChecker {
+  static Future<GitHubRelease?> checkForUpdates() async {
+    final response = await http.get(Uri.parse('$githubApiUrl/releases/latest'));
+    if (response.statusCode == 200) {
+      final release = GitHubRelease.fromJson(json.decode(response.body));
+      return _compareVersions(release.tagName, AppDetails.version) > 0 ? release : null;
+    }
+    return null;
+  }
 
-// Favorites Management
-'favorites' Box:
-├── anime_slug_1: Anime      # Favorite anime objects
-├── anime_slug_2: Anime      # Keyed by anime slug for quick access
-└── ...
-
-// Library & Collections
-'library' Box:
-├── library_list: List<Anime>                                   # Main library anime list
-├── collections: Map                                            # Custom collections
-│   ├── collection_name_1: List<Anime>                          # Anime slugs in collection
-│   └── collection_name_2: List<Anime>
-├── watched: List                                               # Watch history
-    └── anime_slug_episodes: Map<Anime,Map<String, int>>        # Per-anime episode watch status
-
-// Watch History
-'history' Box:
-└── watch_history: List      # Chronological search history
+  static Future<void> downloadAndInstallUpdate(BuildContext context, GitHubRelease release) async {
+    // Multi-stage download with progress tracking
+    // Notification management
+    // Installation with multiple fallback methods
+  }
+}
 ```
 
-#### Hive Helper Functions
+### Enhanced Video Player Management (v1.0.1 Fix)
 
 ```dart
-// User Box Functions
+class _SourcesPageState extends ConsumerState<SourcesPage> {
+  // Section-aware cache key to prevent cross-contamination
+  String get _cacheKey => '${widget.anime.slug}-${_currentPlayingEpisode?.episodeID ?? ''}-${DateTime.now().millisecondsSinceEpoch}';
+
+  void _clearAnimeSpecificProviders() {
+    if (_isDisposing || !mounted) return;
+    
+    try {
+      // Force clear all possible cached providers
+      ref.invalidate(serversViewModelProvider(widget.anime.slug));
+      ref.invalidate(sourcesViewModelProvider);
+      ref.invalidate(vidSrcSourcesProvider(_cacheKey));
+    } catch (e) {
+      print('Provider invalidation error: $e');
+    }
+  }
+
+  Future<void> _setupBetterPlayer(String videoUrl, List<Captions> captions) async {
+    // Always dispose previous player when setting up new one
+    _forceDisposePlayer();
+    await Future.delayed(Duration(milliseconds: 300));
+    
+    // Enhanced video player initialization with proper state management
+    _betterPlayerController = BetterPlayerController(/* configuration */);
+  }
+}
+```
+
+### Comprehensive Backup System
+
+```dart
+class BackupManager {
+  static Future<void> exportUserData() async {
+    final backupData = {
+      'favorites': FavoritesBoxFunctions.listFavorites(),
+      'library': LibraryBoxFunctions.getLibraryAnimes(),
+      'collections': LibraryBoxFunctions.getCollections(),
+      'watchHistory': LibraryBoxFunctions.getWatchedHistory(),
+      'userPreferences': UserBoxFunctions.getAllPreferences(),
+      'metadata': {
+        'exportDate': DateTime.now().toIso8601String(),
+        'appVersion': AppDetails.version,
+        'dataVersion': '1.0',
+      }
+    };
+    // File creation, validation, and export
+  }
+
+  static Future<void> importUserData(String filePath) async {
+    // Data validation, backup creation, and import with progress tracking
+  }
+}
+```
+
+### Enhanced Local Storage with Hive
+
+```dart
+// Enhanced User Box Functions with backup support
 class UserBoxFunctions {
-  static bool isSetupDone() {
-    return Hive.box('user').get('firstSetup', defaultValue: false);
+  static Map<String, dynamic> getAllPreferences() {
+    final userBox = Hive.box('user');
+    return {
+      'firstSetup': userBox.get('firstSetup', defaultValue: false),
+      'installedVersion': userBox.get('installedVersion', defaultValue: ''),
+      'darkMode': userBox.get('darkMode', defaultValue: 1),
+      'userName': userBox.get('userName', defaultValue: ''),
+      'userProfile': userBox.get('userProfile', defaultValue: ''),
+    };
   }
-  
-  static void markFirstSetup() {
-    Hive.box('user').put('firstSetup', true);
-  }
-  
-  static bool isDarkMode(BuildContext context) {
-    final darkModeStatus = Hive.box('user').get('darkMode', defaultValue: 1);
-    return darkModeStatus == 1 || 
-           (darkModeStatus == 2 && Theme.brightnessOf(context) == Brightness.dark);
-  }
-}
 
-// Library Box Functions
-class LibraryBoxFunctions {
-  static List<Anime> getLibraryAnimes() {
-    return Hive.box('library').get('library_list', defaultValue: <Anime>[]);
+  static Future<void> exportData() async {
+    // Enhanced export functionality with progress tracking
   }
-  
-  static void addToLibrary(Anime anime) {
-    final library = getLibraryAnimes();
-    library.add(anime);
-    Hive.box('library').put('library_list', library);
-  }
-}
 
-// Favorites Box Functions
-class FavoritesBoxFunctions {
-  static List<Anime> listFavorites() {
-    final favBox = Hive.box('favorites');
-    return favBox.values.cast<Anime>().toList();
-  }
-  
-  static void addToFavorites(Anime anime) {
-    Hive.box('favorites').put(anime.slug, anime);
-  }
-  
-  static bool isFavorite(String animeSlug) {
-    return Hive.box('favorites').containsKey(animeSlug);
+  static Future<void> importData(Map<String, dynamic> data) async {
+    // Enhanced import with validation and error handling
   }
 }
 ```
 
-### Data Flow Architecture
-
-```
-UI Layer (Pages/Widgets)
-    ↓ (User Interaction)
-ViewModel (StateNotifier)
-    ↓ (Business Logic)
-Repository (Data Access)
-    ↓ (API Calls / Local Storage)
-Data Sources (HTTP / Hive)
-```
-
-### Model Architecture
-
-```dart
-// Base Anime Model
-@HiveType(typeId: 0)
-class Anime extends HiveObject {
-  @HiveField(0)
-  final String slug;
-  
-  @HiveField(1)
-  final String title;
-  
-  @HiveField(2)
-  final String image;
-  
-  @HiveField(3)
-  final String? synopsis;
-  
-  // Constructor and methods...
-}
-
-// Feature-specific Models
-class AnimeDetails extends Anime {
-  final List<String> genres;
-  final String status;
-  final int? episodeCount;
-  final double? rating;
-  // Additional detail fields...
-}
-```
-
-### Technical Stack
+### Technical Stack Updates
 
 | Category | Technologies |
 |----------|--------------|
@@ -266,24 +271,27 @@ class AnimeDetails extends Anime {
 | **Language** | Dart 3.8.1 |
 | **Platforms** | Android, iOS [To-Do], Web[To-Do], Windows[To-Do], Linux[To-Do] |
 | **State Management** | Riverpod |
-| **Architecture** | Model-View-ViewModel [MVVM] |
-| **Local Storage** | Hive |
-| **Networking** | HTTP package |
+| **Architecture** | Feature based MVVM |
+| **Local Storage** | Hive with Backup/Restore |
+| **Networking** | HTTP package, Dio for downloads |
 | **Media** | Cached Network Image, Better Player Plus |
 | **UI Enhancement** | Shimmer, Carousel Slider |
-| **Onboarding** | Flutter Onboarding Slider |
-| **Markdown** | Flutter Markdown Plus |
-| **Notifications** | Toastification |
+| **Notifications** | Flutter Local Notifications, Toastification |
+| **File Management** | Path Provider, File Picker, Open File |
+| **Permissions** | Permission Handler |
+| **Device Info** | Device Info Plus |
+| **App Management** | Restart App, Android Intent Plus |
 | **External Links** | URL Launcher |
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Flutter
-- Dart
+- Flutter 3.32.8 or higher
+- Dart 3.8.1 or higher
 - Android Studio / VS Code with Flutter extensions
 - Git for version control
+- Android SDK (for Android development)
 
 ### Installation
 
@@ -295,7 +303,7 @@ cd ShinobiHaven
 
 2. **Install dependencies**
 ```bash
-flutter pub get --no-example
+flutter pub get
 ```
 
 3. **Generate Hive adapters**
@@ -305,11 +313,11 @@ dart run build_runner build
 
 4. **Run the application**
 ```bash
-# For Android/iOS
+# For Android
 flutter run
 
-# For Web
-flutter run -d chrome
+# For release build
+flutter build apk --release
 ```
 
 ### Development Setup
@@ -326,11 +334,19 @@ await Hive.openBox('history');
 await Hive.openBox('user');
 ```
 
-2. **Environment Configuration**
-- No external API keys required for basic functionality
-- Local storage handles all user data
+2. **Configure update system**
+```dart
+// Update checker runs automatically on app start
+// No additional configuration required
+```
 
-## 📊 Project Roadmap
+3. **Set up notification system**
+```dart
+// Notifications initialized automatically
+// Permissions requested on first use
+```
+
+## 📊 Enhanced Project Roadmap
 
 - **Phase 1**: Core functionality and UI implementation ✅
 - **Phase 2**: Enhanced episode management and streaming ✅
@@ -339,61 +355,86 @@ await Hive.openBox('user');
 - **Phase 5**: Web platform support and responsive design ✅
 - **Phase 6**: Onboarding experience and user guidance ✅
 - **Phase 7**: Privacy policy and data management ✅
-- **Phase 8**: Performance optimizations and caching 🔄
-- **Phase 9**: Social features and sharing 🔄
-- **Phase 10**: Analytics and user insights 🔄
+- **Phase 8**: Update management and notification system ✅
+- **Phase 9**: Data backup and restore functionality ✅
+- **Phase 10**: Professional splash screen implementation ✅
+- **Phase 11**: Critical bug fixes and video player optimization ✅
+- **Phase 12**: Performance optimizations and caching 🔄
+- **Phase 13**: Advanced video player features 🔄
+- **Phase 14**: Social features and sharing 🔄
+- **Phase 15**: Cloud synchronization options 🔄
+- **Phase 16**: Manga reading support 🔄
 
-## 🔒 Privacy & Data Management
+## 🔒 Enhanced Privacy & Data Management
 
-### Local Storage Only
-- **No Server Storage**: All user data remains on device
-- **Data Control**: Users have full control over their data
-- **Easy Cleanup**: Uninstalling app removes all data
+### Comprehensive Local Storage
+- **Complete Data Control**: All user data remains on device with backup options
+- **Export/Import**: Full data backup and restore capabilities
+- **Data Validation**: Comprehensive validation during import/export operations
+- **Privacy Compliance**: Updated privacy policy with detailed data handling
 
-### Privacy Policy Compliance
-- Comprehensive privacy policy included
-- User consent for third-party content disclaimer
-- Transparent data usage explanation
+### Advanced Data Categories
+- **User Preferences**: Theme, profile, onboarding status, update preferences
+- **Anime Data**: Favorites, collections, watch history with detailed tracking
+- **App State**: Last viewed episodes, search history, update history
+- **Cache Data**: Images, API responses (temporary, automatically managed)
+- **Backup Data**: User-controlled export/import with metadata
 
-### Data Categories
-- **User Preferences**: Theme, profile, onboarding status
-- **Anime Data**: Favorites, collections, watch history
-- **App State**: Last viewed episodes, search history
-- **Cache Data**: Images, API responses (temporary)
+### Update Privacy
+- **Update Checking**: Anonymous GitHub API calls for version checking
+- **Download Management**: Local file handling with secure installation
+- **Notification Control**: User-controlled notification preferences
+- **Data Security**: No personal data transmitted during updates
 
-## 📱 Platform Support
+## 📱 Enhanced Platform Support
 
 ### Android
-- Minimum SDK: 21 (Android 5.0)
-- Target SDK: Latest stable
-- Adaptive icons and splash screens
-- Material Design 3 components
+- **Minimum SDK**: 21 (Android 5.0)
+- **Target SDK**: Latest stable (34)
+- **Adaptive Icons**: Professional splash screens with proper scaling
+- **Material Design 3**: Enhanced components with update management
+- **Android 12+ Support**: Modern Splash Screen API integration
+- **FileProvider**: Secure APK installation across all Android versions
+- **Notification Channels**: Advanced notification management
 
-### iOS
-- Minimum iOS: 12.0
-- Cupertino design patterns
-- iOS-specific navigation patterns
-- Human Interface Guidelines compliance
+### iOS [To-Do]
+- **Minimum iOS**: 12.0
+- **Cupertino Design**: iOS-specific UI patterns
+- **App Store Guidelines**: Compliance with Apple's guidelines
+- **iOS Notifications**: Native notification integration
 
-### Web
-- Progressive Web App features
-- Responsive breakpoints
-- Browser compatibility (Chrome, Firefox, Safari, Edge)
-- Web-specific optimizations
+### Web [To-Do]
+- **Progressive Web App**: Enhanced web capabilities
+- **Responsive Design**: Optimized for desktop and mobile browsers
+- **Web Notifications**: Browser notification support
+- **File System Access**: Web-based backup/restore functionality
 
-### Windows
-- Windows 10 version 1903 or higher (build 18362)
-- UWP and Win32 deployment support
-- Windows-specific UI patterns and navigation
-- System integration (taskbar, notifications)
-- File association and protocol handling
+## 🔧 Advanced Configuration
 
-### Linux
-- Ubuntu 18.04 LTS or higher
-- Debian-based distributions support
-- GTK-based native rendering
-- Desktop integration (app launcher, file manager)
-- Wayland and X11 display server compatibility
+### Update Management
+```yaml
+# No configuration required - automatic GitHub integration
+# Customizable in core/constants/app_details.dart
+```
+
+### Notification Settings
+```dart
+// Automatic initialization with user permission handling
+// Customizable notification channels and behaviors
+```
+
+### Video Player Configuration (v1.0.1)
+```dart
+// Enhanced video player with proper state management
+// Section-aware caching to prevent cross-contamination
+// Automatic cleanup and disposal
+```
+
+### Backup Configuration
+```dart
+// Automatic backup structure generation
+// User-controlled export/import with validation
+```
 
 ## 🤝 Contributing
 
@@ -401,18 +442,30 @@ await Hive.openBox('user');
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Follow the established architecture patterns
 4. Add tests for new functionality
-5. Commit changes (`git commit -m 'Add amazing feature'`)
-6. Push to branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
+5. Update documentation as needed
+6. Commit changes (`git commit -m 'Add amazing feature'`)
+7. Push to branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
 
-### Development Guidelines
+### Enhanced Development Guidelines
 
-- Follow MVVM architecture pattern
-- Use Riverpod for state management
-- Implement proper error handling
-- Add comprehensive documentation
-- Write unit and widget tests
-- Follow Dart style guidelines
+- Follow enhanced MVVM architecture with update management
+- Use Riverpod for all state management
+- Implement comprehensive error handling with user feedback
+- Add detailed documentation for new features
+- Follow Dart style guidelines and best practices
+- Consider privacy implications for new features
+- Test across different Android versions and screen sizes
+- Validate video player state management for new streaming features
+
+### Code Quality Standards
+- **Architecture Consistency**: Follow established patterns
+- **Error Handling**: Comprehensive error management with user feedback
+- **Performance**: Optimize for smooth user experience
+- **Privacy**: Ensure all data handling follows privacy guidelines
+- **Testing**: Adequate test coverage for new features
+- **Documentation**: Clear documentation for complex features
+- **Memory Management**: Proper disposal and cleanup (critical for video features)
 
 ## 📄 License
 
@@ -420,25 +473,52 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👨‍💻 Developer
 
+<img src="https://avatars.githubusercontent.com/u/89354282?s=400&u=b168bc48d28bb7cc08e96730cd00691b4b1182ef&v=4" width="150" style="border-radius: 12%; object-fit: cover;">
+
 **thetwodigiter**
 
-- GitHub: [@iamthetwodigiter](https://github.com/iamthetwodigiter)
+- GitHub: [iamthetwodigiter](https://github.com/iamthetwodigiter)
 - Repository: [ShinobiHaven](https://github.com/iamthetwodigiter/ShinobiHaven)
 
-## 📞 Support
+## 📞 Support & Community
 
 For support, feature requests, or bug reports:
-- Open an issue on GitHub
-- Contact the developer through GitHub
-- Review the privacy policy for data-related queries
+- **GitHub Issues**: Open an issue for bugs or feature requests
+- **Discussions**: Use GitHub Discussions for general questions
+- **Developer Contact**: Contact through GitHub profile
+- **Privacy Queries**: Review the comprehensive privacy policy
+- **Update Issues**: Check the update management documentation
+
+### Getting Help
+- **Documentation**: Comprehensive README and code documentation
+- **Issue Templates**: Use provided templates for bug reports and features
+- **Community Guidelines**: Follow established community standards
+- **Privacy Support**: Dedicated privacy policy for data-related queries
 
 ## 🙏 Acknowledgments
 
-- Flutter team for the amazing framework
-- Riverpod for excellent state management
-- Hive for efficient local storage
-- Open source community for various packages used
+- **Flutter Team**: For the amazing cross-platform framework
+- **Riverpod**: For excellent state management capabilities
+- **Hive**: For efficient local storage solutions
+- **Community Packages**: All the amazing open-source packages used
+- **Users**: For feedback and bug reports that helped improve the app
+
+### Special Thanks
+- **Android Community**: For FileProvider and notification best practices
+- **GitHub**: For API access and hosting platform
+- **Open Source Community**: For inspiration
+- **Beta Testers**: For identifying critical video player issues fixed in v1.0.1
 
 ---
 
-**Developed with ❤️ using Flutter**
+**Developed with ❤️ using Flutter | Professional, Privacy-Focused, Feature-Rich**
+
+### Recent Updates Summary
+- ✅ **v1.0.1**: Critical video player fixes and enhanced state management
+- ✅ **v1.0.0**: Complete Update Management System with GitHub integration
+- ✅ **v1.0.0**: Professional Native Splash Screen with proper scaling
+- ✅ **v1.0.0**: Comprehensive Data Backup/Restore functionality
+- ✅ **v1.0.0**: Advanced Notification Management with smart lifecycle control
+- ✅ **v1.0.0**: Enhanced User Experience with streamlined navigation
+- ✅ **v1.0.0**: Performance Optimizations and better resource management
+- ✅ **v1.0.0**: Privacy Enhancements with detailed data handling transparency

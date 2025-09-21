@@ -1,10 +1,22 @@
 class AppDetails {
-  static const String version = "v1.0.0";
+  static const String version = "v1.0.1";
   static const String developer = "thetwodigiter";
   static const bool isBeta = false;
   static const String repoURL = "https://github.com/iamthetwodigiter/ShinobiHaven";
   static const List<Map<String, dynamic>> changelogs = [
     {
+      "v1.0.1": {
+        "title": "Bug Fixes & Performance Improvements",
+        "date": "2025-01-21",
+        "notes": [
+          "Fixed critical video player persistence issue between different anime",
+          "Resolved video playback continuing when switching between anime from same section",
+          "Enhanced provider state management to prevent cross-contamination of video sources",
+          "Improved video player initialization with better state validation",
+          "Enhanced video URL validation and cleanup to prevent cached playback issues",
+          "Enhanced widget lifecycle management for better memory usage and stability",
+        ],
+      },
       "v1.0.0": {
         "title": "Official Release",
         "date": "2025-01-20",
@@ -41,7 +53,7 @@ class AppDetails {
           "Advanced statistics tracking for most watched anime",
           "Better file management for downloads and temporary files",
           "Enhanced security with proper file provider configuration",
-          "Improved app startup performance and resource management"
+          "Improved app startup performance and resource management",
         ],
       },
       "v1.0.0-pre-release": {
@@ -65,7 +77,7 @@ class AppDetails {
           "Video player integration with multiple streaming sources",
           "User profile customization with avatar selection",
           "Theme preferences with light and dark mode options",
-          "Data consent and disclaimer system for user transparency"
+          "Data consent and disclaimer system for user transparency",
         ],
       },
       "unreleased": {

@@ -80,15 +80,14 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
       _showLoadingDialog();
       return;
     }
-    // final lastWatchedEpisodeNumber = LibraryBoxFunction.getLastWatchedEpisode(
-    //   widget.animeSlug,
-    // );
+
     final lastWatchedEpisode = LibraryBoxFunction.getLastWatchedEpisodeObject(
       widget.animeSlug,
       _episodes,
     );
     final episodeToPlay =
         lastWatchedEpisode ?? LibraryBoxFunction.getFirstEpisode(_episodes);
+
     if (episodeToPlay != null) {
       LibraryBoxFunction.addToLibrary(_anime!, episodeToPlay.episodeID);
       LibraryBoxFunction.markLastWatchedEpisode(
@@ -96,18 +95,27 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
         episodeToPlay.episodeNumber,
       );
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SourcesPage(
-            anime: _anime!,
-            episodes: _episodes,
-            currentEpisode: episodeToPlay,
-          ),
-        ),
-      ).then((_) {
+      final sectionInfo = '${_anime!.type}-${_anime!.image.hashCode}';
+      final uniqueKey =
+          '${_anime!.slug}-${episodeToPlay.episodeID}-$sectionInfo-${DateTime.now().millisecondsSinceEpoch}';
+
+      Future.delayed(Duration(milliseconds: 300), () {
         if (mounted) {
-          setState(() {});
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SourcesPage(
+                key: ValueKey(uniqueKey),
+                anime: _anime!,
+                episodes: _episodes,
+                currentEpisode: episodeToPlay,
+              ),
+            ),
+          ).then((_) {
+            if (mounted) {
+              setState(() {});
+            }
+          });
         }
       });
     } else {

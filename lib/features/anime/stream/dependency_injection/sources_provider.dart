@@ -12,9 +12,11 @@ final sourcesViewModelProvider =
     });
 
 final vidSrcSourcesProvider =
-    StateNotifierProvider<VidSrcSourceViewModel, AsyncValue<VidSrcSource>>((
-      ref,
-    ) {
+    StateNotifierProvider.family<
+      VidSrcSourceViewModel,
+      AsyncValue<VidSrcSource>,
+      String
+    >((ref, cacheKey) {
       final sourcesRepository = ref.watch(sourcesRepositoryProvider);
       return VidSrcSourceViewModel(sourcesRepository);
     });
