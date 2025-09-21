@@ -7,7 +7,7 @@ class AppDetails {
     {
       "v1.0.1": {
         "title": "Bug Fixes & Performance Improvements",
-        "date": "2025-01-21",
+        "date": "2025-09-21",
         "notes": [
           "Fixed critical video player persistence issue between different anime",
           "Resolved video playback continuing when switching between anime from same section",
@@ -19,7 +19,7 @@ class AppDetails {
       },
       "v1.0.0": {
         "title": "Official Release",
-        "date": "2025-01-20",
+        "date": "2025-09-20",
         "notes": [
           "Official stable release of ShinobiHaven",
           "Added professional splash screen for enhanced app startup experience",
