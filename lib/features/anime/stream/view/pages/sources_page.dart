@@ -35,7 +35,6 @@ class SourcesPage extends ConsumerStatefulWidget {
 class _SourcesPageState extends ConsumerState<SourcesPage>
     with WidgetsBindingObserver {
   String? _lastSectionKey;
-
   BetterPlayerController? _betterPlayerController;
   String? _videoURL;
   bool _videoReady = false;
@@ -54,8 +53,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
   bool _isDisposing = false;
   Timer? _initializationTimer;
 
-  String get _cacheKey =>
-      '${widget.anime.slug}-${_currentPlayingEpisode?.episodeID ?? ''}-${DateTime.now().millisecondsSinceEpoch}';
+  String get _stableCacheKey => '${widget.anime.slug}-${_currentPlayingEpisode?.episodeID ?? ''}';
 
   String _getSectionKey() {
     return '${widget.anime.slug}-${widget.anime.type}-${widget.anime.image}';
@@ -80,6 +78,9 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
 
         _clearAnimeSpecificProviders();
         _currentPlayingEpisode = widget.currentEpisode;
+        _isLoadingServers = true;
+        _isLoadingSources = true;
+        _isLoadingVidSrc = true;
 
         Future.delayed(Duration(milliseconds: delay), () {
           if (mounted && !_isDisposing) {
@@ -110,14 +111,9 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     if (_isDisposing || !mounted) return;
 
     try {
-      ref.invalidate(serversViewModelProvider(widget.anime.slug));
+      ref.invalidate(serversViewModelProvider);
       ref.invalidate(sourcesViewModelProvider);
-      ref.invalidate(vidSrcSourcesProvider(_cacheKey));
-
-      final containers = ProviderScope.containerOf(context);
-      containers.invalidate(serversViewModelProvider);
-      containers.invalidate(sourcesViewModelProvider);
-      containers.invalidate(vidSrcSourcesProvider);
+      ref.invalidate(vidSrcSourcesProvider);
     } catch (_) {}
   }
 
@@ -162,15 +158,10 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
 
     if (!_isDisposing && mounted) {
       try {
-        ref.invalidate(serversViewModelProvider(widget.anime.slug));
+        ref.invalidate(serversViewModelProvider);
         ref.invalidate(sourcesViewModelProvider);
-        ref.invalidate(vidSrcSourcesProvider(_cacheKey));
-
-        await Future.delayed(Duration(milliseconds: 300));
-
-        ref.invalidate(serversViewModelProvider(widget.anime.slug));
-        ref.invalidate(sourcesViewModelProvider);
-        ref.invalidate(vidSrcSourcesProvider(_cacheKey));
+        ref.invalidate(vidSrcSourcesProvider);
+        await Future.delayed(Duration(milliseconds: 200));
       } catch (_) {}
     }
 
@@ -185,8 +176,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     });
 
     try {
-      await Future.delayed(Duration(milliseconds: 400));
-
       if (_isDisposing || !mounted) return;
 
       await ref
@@ -233,8 +222,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
           if (mounted && !_isDisposing) {
             setState(() {
               _hasError = true;
-              _errorMessage =
-                  'No compatible servers found for ${widget.anime.title}';
+              _errorMessage = 'No compatible servers found';
               _isLoadingNewEpisode = false;
             });
           }
@@ -244,8 +232,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
       if (mounted && !_isDisposing) {
         setState(() {
           _hasError = true;
-          _errorMessage =
-              'Failed to load servers for ${widget.anime.title}: $e';
+          _errorMessage = 'Failed to load servers: $e';
           _isLoadingNewEpisode = false;
           _isLoadingServers = false;
         });
@@ -266,9 +253,9 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
       if (!_isDisposing && mounted) {
         try {
           ref.invalidate(sourcesViewModelProvider);
-          ref.invalidate(vidSrcSourcesProvider(_cacheKey));
+          ref.invalidate(vidSrcSourcesProvider);
         } catch (_) {}
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(Duration(milliseconds: 100));
       }
 
       if (_isDisposing || !mounted) return;
@@ -293,20 +280,17 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
 
       final sources = sourcesState.value;
       if (sources != null) {
-        final vidSrcCacheKey =
-            '${widget.anime.slug}-${sources.dataID}-${DateTime.now().millisecondsSinceEpoch}';
-
         if (!_isDisposing && mounted) {
           try {
-            ref.invalidate(vidSrcSourcesProvider(vidSrcCacheKey));
+            ref.invalidate(vidSrcSourcesProvider);
           } catch (_) {}
-          await Future.delayed(Duration(milliseconds: 200));
+          await Future.delayed(Duration(milliseconds: 100));
         }
 
         if (_isDisposing || !mounted) return;
 
         await ref
-            .read(vidSrcSourcesProvider(vidSrcCacheKey).notifier)
+            .read(vidSrcSourcesProvider(_stableCacheKey).notifier)
             .getVidSrcSources(sources.dataID, sources.key);
 
         if (!_isDisposing && mounted) {
@@ -327,8 +311,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
       if (mounted && !_isDisposing) {
         setState(() {
           _hasError = true;
-          _errorMessage =
-              'Failed to load stream for ${widget.anime.title}: ${e.toString()}';
+          _errorMessage = 'Failed to load stream: ${e.toString()}';
           _isLoadingNewEpisode = false;
           _isLoadingSources = false;
           _isLoadingVidSrc = false;
@@ -377,8 +360,8 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
           looping: false,
           fit: BoxFit.contain,
           aspectRatio: 16 / 9,
-          handleLifecycle: true,
-          autoDispose: true,
+          handleLifecycle: false,
+          autoDispose: false,
 
           controlsConfiguration: BetterPlayerControlsConfiguration(
             playerTheme: BetterPlayerTheme.cupertino,
@@ -595,7 +578,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
       try {
         _betterPlayerController!.pause();
         _betterPlayerController!.setVolume(0.0);
-        _betterPlayerController!.clearCache();
         _betterPlayerController!.dispose();
       } catch (_) {
       } finally {
@@ -940,6 +922,50 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     );
   }
 
+  Widget _buildLoadingStep(String label, bool isActive, bool isCompleted) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isCompleted
+                ? AppTheme.primaryGreen
+                : isActive
+                ? AppTheme.gradient1
+                : AppTheme.whiteGradient.withValues(alpha: 0.3),
+          ),
+          child: isCompleted
+              ? Icon(Icons.check, color: AppTheme.whiteGradient, size: 14)
+              : isActive
+              ? SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(
+                    color: AppTheme.whiteGradient,
+                    strokeWidth: 2,
+                  ),
+                )
+              : null,
+        ),
+        SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isCompleted || isActive
+                  ? AppTheme.whiteGradient
+                  : AppTheme.whiteGradient.withValues(alpha: 0.5),
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isDisposing) {
@@ -953,10 +979,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
 
     ref.watch(serversViewModelProvider(widget.anime.slug));
     ref.watch(sourcesViewModelProvider);
-
-    final timestampedCacheKey =
-        '${widget.anime.slug}-${_currentPlayingEpisode?.episodeID ?? ''}-${DateTime.now().millisecondsSinceEpoch}';
-    final vidSrcSource = ref.watch(vidSrcSourcesProvider(timestampedCacheKey));
+    final vidSrcSource = ref.watch(vidSrcSourcesProvider(_stableCacheKey));
 
     if (_hasError) {
       return Scaffold(
@@ -1238,50 +1261,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                 ),
         ),
       ),
-    );
-  }
-
-  Widget _buildLoadingStep(String label, bool isActive, bool isCompleted) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 20,
-          height: 20,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isCompleted
-                ? AppTheme.primaryGreen
-                : isActive
-                ? AppTheme.gradient1
-                : AppTheme.whiteGradient.withValues(alpha: 0.3),
-          ),
-          child: isCompleted
-              ? Icon(Icons.check, color: AppTheme.whiteGradient, size: 14)
-              : isActive
-              ? SizedBox(
-                  width: 12,
-                  height: 12,
-                  child: CircularProgressIndicator(
-                    color: AppTheme.whiteGradient,
-                    strokeWidth: 2,
-                  ),
-                )
-              : null,
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isCompleted || isActive
-                  ? AppTheme.whiteGradient
-                  : AppTheme.whiteGradient.withValues(alpha: 0.5),
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

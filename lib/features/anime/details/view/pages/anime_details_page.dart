@@ -1011,26 +1011,28 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                                     size: 24,
                                   ),
                                   SizedBox(width: 8),
-                                  Column(
-                                    children: [
-                                      Text(
-                                        'Watch Now',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppTheme.whiteGradient,
-                                        ),
-                                      ),
-                                      ValueListenableBuilder(
-                                        valueListenable: Hive.box(
-                                          'library',
-                                        ).listenable(keys: ['lastWatched']),
-                                        builder: (context, box, child) {
-                                          final lastWatched =
-                                              LibraryBoxFunction.getLastWatchedEpisode(
-                                                widget.animeSlug,
-                                              );
-                                          return Text(
+                                  ValueListenableBuilder(
+                                    valueListenable: Hive.box(
+                                      'library',
+                                    ).listenable(keys: ['lastWatched']),
+                                    builder: (context, box, child) {
+                                      final lastWatched =
+                                          LibraryBoxFunction.getLastWatchedEpisode(
+                                            widget.animeSlug,
+                                          );
+                                      return Column(
+                                        children: [
+                                          Text(
+                                            lastWatched != null
+                                                ? 'Resume'
+                                                : 'Watch Now',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.whiteGradient,
+                                            ),
+                                          ),
+                                          Text(
                                             lastWatched != null
                                                 ? 'Episode $lastWatched'
                                                 : 'Start from Episode 1',
@@ -1039,10 +1041,10 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                                               color: AppTheme.whiteGradient
                                                   .withValues(alpha: 0.8),
                                             ),
-                                          );
-                                        },
-                                      ),
-                                    ],
+                                          ),
+                                        ],
+                                      );
+                                    },
                                   ),
                                 ],
                               ),
