@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:android_intent_plus/flag.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:open_file/open_file.dart';
@@ -223,14 +224,26 @@ class UpdateChecker {
               SizedBox(height: 8),
               Container(
                 height: 150,
-                width: double.maxFinite,
+                width: double.infinity, // Add explicit width
                 decoration: BoxDecoration(
                   border: Border.all(color: AppTheme.gradient1.withAlpha(100)),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: SingleChildScrollView(
                   padding: EdgeInsets.all(8),
-                  child: Text(release.body, style: TextStyle(fontSize: 13)),
+                  child: MarkdownBody(
+                    // Use MarkdownBody instead of Markdown
+                    data: release.body,
+                    shrinkWrap: true, // Add shrinkWrap
+                    styleSheet: MarkdownStyleSheet(
+                      p: TextStyle(fontSize: 13),
+                      h1: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      h2: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      h3: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      listBullet: TextStyle(fontSize: 13),
+                      code: TextStyle(fontSize: 12),
+                    ),
+                  ),
                 ),
               ),
             ],
