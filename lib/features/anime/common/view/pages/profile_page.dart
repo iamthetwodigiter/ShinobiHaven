@@ -8,6 +8,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:restart_app/restart_app.dart';
 import 'package:shinobihaven/core/constants/app_details.dart';
 import 'package:shinobihaven/core/constants/privacy_policy.dart';
+import 'package:shinobihaven/core/providers/update_provider.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/core/theme/theme_provider.dart';
 import 'package:shinobihaven/core/utils/favorites_box_functions.dart';
@@ -17,19 +18,20 @@ import 'package:shinobihaven/core/utils/toast.dart';
 import 'package:shinobihaven/core/utils/update_checker.dart';
 import 'package:shinobihaven/core/utils/user_box_functions.dart';
 import 'package:shinobihaven/core/widgets/theme_choice.dart';
+import 'package:shinobihaven/core/widgets/update_settings_sheet.dart';
 import 'package:shinobihaven/features/anime/common/model/anime.dart';
 import 'package:shinobihaven/features/anime/details/view/pages/anime_details_page.dart';
 import 'package:toastification/toastification.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class ProfilePage extends StatefulWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends ConsumerState<ProfilePage> {
   late String _userProfile = UserBoxFunctions.getUserProfile();
   late String _userName = UserBoxFunctions.getUserName();
 
@@ -73,8 +75,27 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _showUpdateSettings() async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.blackGradient,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => UpdateSettingsSheet(),
+    );
+  }
+
   void _checkForUpdates() async {
-    await UpdateChecker.checkForUpdates(context);
+    final isChecking = ref.read(updateCheckStatusProvider.notifier);
+    isChecking.state = true;
+
+    try {
+      await UpdateChecker.checkForUpdates(context);
+    } finally {
+      isChecking.state = false;
+    }
   }
 
   Widget _listTile(
@@ -220,9 +241,20 @@ class _ProfilePageState extends State<ProfilePage> {
               },
             ),
             _listTile(
-              'Check for updates',
-              Icons.system_update_sharp,
-              onPressed: _checkForUpdates,
+              'Update Settings',
+              Icons.settings_system_daydream,
+              onPressed: _showUpdateSettings,
+            ),
+            Consumer(
+              builder: (context, ref, child) {
+                final isChecking = ref.watch(updateCheckStatusProvider);
+                return _listTile(
+                  'Check for updates',
+                  Icons.system_update_sharp,
+                  onPressed: isChecking ? null : _checkForUpdates,
+                  subtitle: isChecking ? 'Checking...' : null,
+                );
+              },
             ),
             _listTile(
               'Want to contribute to the project?',

@@ -1,6 +1,12 @@
 import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shinobihaven/core/providers/update_provider.dart';
+import 'package:shinobihaven/core/utils/update_checker.dart';
+import 'package:shinobihaven/core/utils/toast.dart';
+import 'package:toastification/toastification.dart';
 
 enum NotificationChannel {
   downloads(
@@ -323,5 +329,80 @@ extension NotificationServiceExtensions on NotificationService {
         ),
       ],
     );
+  }
+}
+
+class NotificationHandler {
+  static Future<void> handleNotificationAction(
+    BuildContext context,
+    WidgetRef ref,
+    String? payload,
+    String? actionId,
+  ) async {
+    if (payload == null) return;
+
+    if (payload.startsWith('update_available:')) {
+      final version = payload.split(':')[1];
+      await _handleUpdateAvailable(context, ref, version, actionId);
+    } else if (payload.startsWith('update_details:')) {
+      final version = payload.split(':')[1];
+      await _handleUpdateDetails(context, ref, version, actionId);
+    }
+  }
+
+  static Future<void> _handleUpdateAvailable(
+    BuildContext context,
+    WidgetRef ref,
+    String version,
+    String? actionId,
+  ) async {
+    switch (actionId) {
+      case 'update':
+      case 'install_now':
+        await UpdateChecker.checkForUpdates(context, showNoUpdateDialog: false);
+        break;
+
+      case 'later':
+      case 'dismiss':
+        await ref.read(updateSettingsProvider.notifier).dismissUpdate(version);
+        if (context.mounted) {
+          Toast(
+            context: context,
+            title: 'Update Dismissed',
+            description: 'You won\'t be notified about this version again',
+            type: ToastificationType.info,
+          );
+        }
+        break;
+
+      default:
+        await UpdateChecker.checkForUpdates(context, showNoUpdateDialog: false);
+        break;
+    }
+  }
+
+  static Future<void> _handleUpdateDetails(
+    BuildContext context,
+    WidgetRef ref,
+    String version,
+    String? actionId,
+  ) async {
+    switch (actionId) {
+      case 'install_now':
+        await UpdateChecker.checkForUpdates(context, showNoUpdateDialog: false);
+        break;
+
+      case 'view_changes':
+        await UpdateChecker.checkForUpdates(context, showNoUpdateDialog: false);
+        break;
+
+      case 'dismiss':
+        await ref.read(updateSettingsProvider.notifier).dismissUpdate(version);
+        break;
+
+      default:
+        await UpdateChecker.checkForUpdates(context, showNoUpdateDialog: false);
+        break;
+    }
   }
 }

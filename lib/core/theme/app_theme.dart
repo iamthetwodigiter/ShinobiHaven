@@ -27,6 +27,10 @@ class AppTheme {
       BottomNavigationBarThemeData(
         enableFeedback: true,
         type: BottomNavigationBarType.fixed,
+        selectedIconTheme: IconThemeData(size: 20),
+        unselectedIconTheme: IconThemeData(size: 18),
+        selectedLabelStyle: TextStyle(fontSize: 14),
+        unselectedLabelStyle: TextStyle(fontSize: 12),
         selectedItemColor: gradient1,
         unselectedItemColor: greyGradient,
       );
