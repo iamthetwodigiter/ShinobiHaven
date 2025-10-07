@@ -14,7 +14,12 @@ class AppDetails {
           "ThemeProvider enhanced: added accentColor provider and updated ThemeNotifier.setAccentColor to notify app and persist changes",
           "Replaced nested unbounded ListView builders in profile/theme selector with constrained layout (GridView/Wrap) to fix RenderFlex overflow",
           "Progress indicators and bottom navigation selected item color now react to the selected accent",
-          "General provider & rebuild fixes so theme changes propagate reliably across the app"
+          "General provider & rebuild fixes so theme changes propagate reliably across the app",
+          "Background update checker added with the following capabilities:",
+          "  • Periodic background checks: schedules lightweight remote manifest checks (respecting device power/data settings)",
+          "  • Manual check UI: 'Check for updates' action in settings that runs the same manifest check on demand",
+          "  • Dismissible update notifications: in-app notification and system notification with dismiss / remind-later actions",
+          "  • Install flow: hands off to platform installer (APK intent) or prompts user per platform policy; respects install-permission state",
         ],
       },
       "v1.0.1": {
