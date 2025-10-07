@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:shinobihaven/core/pages/splash_screen.dart';
+import 'package:shinobihaven/core/services/background_update_service.dart';
+import 'package:shinobihaven/core/theme/accent_color_adapter.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/core/theme/theme_provider.dart';
 import 'package:shinobihaven/core/utils/notification_service.dart';
@@ -18,6 +20,7 @@ void main() async {
 
   await Hive.initFlutter();
   Hive.registerAdapter(AnimeAdapter());
+  Hive.registerAdapter(AccentColorAdapter());
 
   if (!Hive.isBoxOpen('favorites')) await Hive.openBox('favorites');
   if (!Hive.isBoxOpen('library')) await Hive.openBox('library');
@@ -25,6 +28,7 @@ void main() async {
   if (!Hive.isBoxOpen('user')) await Hive.openBox('user');
 
   await NotificationService.initialize();
+  await BackgroundUpdateService.initialize();
 
   runApp(ProviderScope(child: const ShinobiHaven()));
 }
@@ -50,6 +54,7 @@ class _ShinobiHavenState extends ConsumerState<ShinobiHaven> {
     if (userBox.isEmpty) {
       userBox.put('firstSetup', false);
       userBox.put('installedVersion', 'v0.0.0');
+      userBox.put('accentColor', Color.fromARGB(255, 219, 45, 105));
     }
     if (libraryBox.isEmpty) {
       libraryBox.put('watched', []);
@@ -59,6 +64,7 @@ class _ShinobiHavenState extends ConsumerState<ShinobiHaven> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
+    ref.watch(accenetColorProvider);
     return MaterialApp(
       home: SplashScreen(),
       theme: AppTheme.lightTheme,
