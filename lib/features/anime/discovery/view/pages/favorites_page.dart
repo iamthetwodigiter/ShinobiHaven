@@ -241,7 +241,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                           icon: Icon(
                             Icons.delete_rounded,
                             size: 20,
-                            color: AppTheme.gradient2,
+                            color: AppTheme.gradient1,
                           ),
                         ),
                       ],

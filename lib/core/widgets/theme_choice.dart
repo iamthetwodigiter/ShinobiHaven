@@ -26,49 +26,58 @@ class ThemeChoice extends StatelessWidget {
       child: SizedBox(
         height: 180,
         child: DeviceFrame(
-          device: Devices.ios.iPhone15Pro,
+          device: Devices.android.googlePixel9ProXL,
           isFrameVisible: true,
           orientation: Orientation.portrait,
-          screen: Container(
-            color: themeColor,
-            child: Column(
-              spacing: 10,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: EdgeInsets.all(25),
-                  child: Image.asset('assets/images/onboarding_poster.png'),
-                ),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: titleTextColor,
-                    fontSize: 50,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 10),
-                if (currentThemeChoice == themeMode)
-                  Container(
-                    height: 75,
-                    width: 200,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppTheme.gradient1,
-                      borderRadius: BorderRadius.circular(50),
+          screen: Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              Container(
+                color: themeColor,
+                child: Column(
+                  spacing: 10,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Spacer(flex: 3),
+                    Padding(
+                      padding: EdgeInsets.all(25),
+                      child: Image.asset('assets/images/onboarding_poster.png'),
                     ),
-                    child: Text(
-                      'Selected',
+                    Spacer(),
+                    Text(
+                      title,
                       style: TextStyle(
-                        color: AppTheme.whiteGradient,
-                        fontSize: 40,
+                        color: titleTextColor,
+                        fontSize: 50,
                         fontWeight: FontWeight.bold,
                       ),
-                      textAlign: TextAlign.center,
                     ),
+                    // SizedBox(height: 10),
+                    Spacer(flex: 3),
+                  ],
+                ),
+              ),
+              if (currentThemeChoice == themeMode)
+                Container(
+                  height: 75,
+                  width: 200,
+                  margin: EdgeInsets.only(bottom: 75),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppTheme.gradient1,
+                    borderRadius: BorderRadius.circular(50),
                   ),
-              ],
-            ),
+                  child: Text(
+                    'Selected',
+                    style: TextStyle(
+                      color: AppTheme.whiteGradient,
+                      fontSize: 40,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+            ],
           ),
         ),
       ),

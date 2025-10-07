@@ -232,7 +232,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                 ? LinearGradient(
                     colors: [
                       AppTheme.gradient1.withValues(alpha: 0.75),
-                      AppTheme.gradient2.withValues(alpha: 0.75),
+                      AppTheme.gradient1.withValues(alpha: 0.75),
                     ],
                   )
                 : null,
@@ -304,7 +304,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                     Theme.brightnessOf(context) == Brightness.dark
                         ? AppTheme.blackGradient
                         : AppTheme.whiteGradient,
-                    AppTheme.gradient2.withValues(alpha: 0.2),
+                    AppTheme.gradient1.withValues(alpha: 0.2),
                   ],
                 ),
                 border: Border.all(color: AppTheme.gradient1),
@@ -350,7 +350,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                 Theme.brightnessOf(context) == Brightness.dark
                     ? AppTheme.blackGradient
                     : AppTheme.whiteGradient,
-                AppTheme.gradient2.withValues(alpha: 0.1),
+                AppTheme.gradient1.withValues(alpha: 0.1),
               ],
             ),
             borderRadius: BorderRadius.circular(15),
@@ -925,7 +925,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                         gradient: LinearGradient(
                           colors: [
                             AppTheme.blackGradient,
-                            AppTheme.gradient2.withValues(alpha: 0.2),
+                            AppTheme.gradient1.withValues(alpha: 0.2),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(15),
@@ -966,7 +966,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                         color: AppTheme.gradient1,
                         shadows: [
                           Shadow(
-                            color: AppTheme.gradient2.withValues(alpha: 0.2),
+                            color: AppTheme.gradient1.withValues(alpha: 0.2),
                             blurRadius: 4,
                           ),
                         ],
@@ -989,7 +989,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                                 gradient: LinearGradient(
                                   colors: [
                                     AppTheme.gradient1,
-                                    AppTheme.gradient2,
+                                    AppTheme.gradient1,
                                   ],
                                 ),
                                 boxShadow: [

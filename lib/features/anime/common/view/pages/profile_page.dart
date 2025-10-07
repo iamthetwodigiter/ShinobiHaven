@@ -6,6 +6,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:restart_app/restart_app.dart';
+import 'package:shinobihaven/core/constants/accent_colors.dart';
 import 'package:shinobihaven/core/constants/app_details.dart';
 import 'package:shinobihaven/core/constants/privacy_policy.dart';
 import 'package:shinobihaven/core/providers/update_provider.dart';
@@ -167,8 +168,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               },
             ),
             _listTile(
-              'Set Dark Mode',
-              Icons.brightness_6_rounded,
+              'Set App Theme',
+              Icons.color_lens_rounded,
               onPressed: () {
                 Navigator.push(
                   context,
@@ -548,9 +549,15 @@ class _SetDarkModeState extends ConsumerState<SetDarkMode> {
     );
   }
 
+  void _setAccentColor(Color accentColor) {
+    ref.read(themeModeProvider.notifier).setAccentColor(accentColor);
+  }
+
   @override
   Widget build(BuildContext context) {
     final int selectedMode = UserBoxFunctions.darkModeState();
+    final availableWidth = (MediaQuery.sizeOf(context).width - 48);
+    final accentColor = ref.watch(themeModeProvider.notifier).getAccentColor();
     return Scaffold(
       appBar: AppBar(
         leading: InkWell(
@@ -560,7 +567,7 @@ class _SetDarkModeState extends ConsumerState<SetDarkMode> {
           child: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
         ),
         title: Text(
-          'Set Dark Mode',
+          'Set App Theme',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
@@ -571,7 +578,7 @@ class _SetDarkModeState extends ConsumerState<SetDarkMode> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Choose your theme:',
+                'Choose your app theme:',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 24),
@@ -614,6 +621,43 @@ class _SetDarkModeState extends ConsumerState<SetDarkMode> {
                     },
                   ),
                 ],
+              ),
+              SizedBox(height: 24),
+              Text(
+                'Choose an accent color:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Expanded(
+                child: GridView.count(
+                  padding: EdgeInsets.only(top: 8),
+                  crossAxisCount: (availableWidth ~/ 75).clamp(1, 6),
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  children: AccentColors.accentColors.map((color) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _setAccentColor(color);
+                            });
+                          },
+                          child: Container(
+                            height: 75,
+                            width: 75,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: color,
+                            ),
+                          ),
+                        ),
+                        if (color.toARGB32() == accentColor.toARGB32())
+                          Icon(Icons.done, size: 50),
+                      ],
+                    );
+                  }).toList(),
+                ),
               ),
             ],
           ),
@@ -1133,7 +1177,7 @@ class _UserTopAnimesState extends State<UserTopAnimes> {
                                     Icon(
                                       Icons.play_arrow,
                                       size: 14,
-                                      color: AppTheme.gradient2,
+                                      color: AppTheme.gradient1,
                                     ),
                                     SizedBox(width: 6),
                                   ],
@@ -1169,7 +1213,7 @@ class _UserTopAnimesState extends State<UserTopAnimes> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.gradient2,
+                            color: AppTheme.gradient1,
                           ),
                         ),
                       ],

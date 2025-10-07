@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/features/anime/common/view/widgets/anime_card.dart';
+import 'package:shinobihaven/features/anime/discovery/view/pages/search_page.dart';
 import 'package:shinobihaven/features/anime/home/dependency_injection/home_provider.dart';
 import 'package:shinobihaven/features/anime/home/view/widgets/spotlight_card.dart';
 
@@ -30,7 +31,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final homePageData = ref.watch(homeViewModelProvider);
-
     return Scaffold(
       extendBody: true,
       extendBodyBehindAppBar: true,
@@ -38,17 +38,24 @@ class _HomePageState extends ConsumerState<HomePage> {
         backgroundColor: AppTheme.transparentColor,
         actionsPadding: EdgeInsets.symmetric(horizontal: 25),
         actions: [
-          // InkWell(
-          //   child: Container(
-          //     padding: EdgeInsets.all(5),
-          //     margin: EdgeInsets.only(left: 10),
-          //     decoration: BoxDecoration(
-          //       color: AppTheme.blackGradient.withValues(alpha: 0.35),
-          //       shape: BoxShape.circle,
-          //     ),
-          //     child: Icon(Icons.settings, color: AppTheme.whiteGradient),
-          //   ),
-          // ),
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SearchPage()),
+              );
+            },
+            child: Container(
+              padding: EdgeInsets.all(5),
+              margin: EdgeInsets.only(left: 10),
+              decoration: BoxDecoration(
+                color: AppTheme.gradient1.withValues(alpha: 0.35),
+                shape: BoxShape.circle,
+                border: Border.all(color: AppTheme.gradient1),
+              ),
+              child: Icon(Icons.search_rounded, color: AppTheme.whiteGradient),
+            ),
+          ),
           // Expanded(
           //   child: SwitchListTile.adaptive(
           //     value: _isAnimeMode,

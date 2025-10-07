@@ -5,7 +5,7 @@ import 'package:shinobihaven/core/utils/user_box_functions.dart';
 import 'package:shinobihaven/features/anime/common/view/pages/profile_page.dart';
 import 'package:shinobihaven/features/anime/discovery/view/pages/favorites_page.dart';
 import 'package:shinobihaven/features/anime/discovery/view/pages/library_page.dart';
-import 'package:shinobihaven/features/anime/discovery/view/pages/search_page.dart';
+import 'package:shinobihaven/features/anime/download/view/pages/download_page.dart';
 import 'package:shinobihaven/features/anime/home/view/pages/home_page.dart';
 
 class LandingPage extends StatefulWidget {
@@ -19,11 +19,12 @@ class _LandingPageState extends State<LandingPage> {
   int _currentIndex = 0;
   final String _installedAppVersion = AppDetails.version;
 
-  final List<Widget> _pages = [
+  List<Widget> get _pages => [
     HomePage(),
-    SearchPage(),
+    // SearchPage(),
     FavoritesPage(),
     LibraryPage(),
+    DownloadsPage(),
     ProfilePage(),
   ];
 
@@ -173,7 +174,7 @@ class _LandingPageState extends State<LandingPage> {
 
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+          // BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
           BottomNavigationBarItem(
             icon: Icon(Icons.favorite),
             label: 'Favorites',
@@ -181,6 +182,10 @@ class _LandingPageState extends State<LandingPage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.view_list),
             label: 'Library',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.download),
+            label: 'Downlods',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],

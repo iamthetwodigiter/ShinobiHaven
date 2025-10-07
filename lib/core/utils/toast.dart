@@ -63,7 +63,7 @@ class Toast {
       case ToastificationType.success:
         return AppTheme.primaryGreen;
       case ToastificationType.error:
-        return AppTheme.gradient2;
+        return AppTheme.primaryRed;
       case ToastificationType.warning:
         return AppTheme.primaryAmber;
       case ToastificationType.info:

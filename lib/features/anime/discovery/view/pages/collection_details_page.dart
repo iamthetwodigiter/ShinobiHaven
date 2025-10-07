@@ -48,7 +48,7 @@ class _CollectionDetailsPageState extends State<CollectionDetailsPage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(backgroundColor: AppTheme.gradient2),
+            style: TextButton.styleFrom(backgroundColor: AppTheme.gradient1),
             child: Text('Delete', style: TextStyle(color: AppTheme.whiteGradient)),
           ),
         ],
@@ -72,7 +72,7 @@ class _CollectionDetailsPageState extends State<CollectionDetailsPage> {
           IconButton(
             tooltip: 'Delete collection',
             onPressed: _deleteCollection,
-            icon: Icon(Icons.delete, color: AppTheme.gradient2),
+            icon: Icon(Icons.delete, color: AppTheme.gradient1),
           ),
         ],
       ),

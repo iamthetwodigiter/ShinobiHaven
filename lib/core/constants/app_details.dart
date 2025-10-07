@@ -1,10 +1,22 @@
 class AppDetails {
-  static const String version = "v1.0.1";
+  static const String version = "v1.0.2";
   static const String developer = "thetwodigiter";
   static const bool isBeta = false;
   static const String repoURL = "https://github.com/iamthetwodigiter/ShinobiHaven";
   static const List<Map<String, dynamic>> changelogs = [
     {
+      "v1.0.2": {
+        "title": "Accent & Theme Improvements",
+        "date": "2025-10-06",
+        "notes": [
+          "Dynamic accent color applied app-wide",
+          "AppTheme refactored to use runtime getters so theme sub-objects (AppBar, ProgressIndicator, BottomNavigationBar) pick up the current accent",
+          "ThemeProvider enhanced: added accentColor provider and updated ThemeNotifier.setAccentColor to notify app and persist changes",
+          "Replaced nested unbounded ListView builders in profile/theme selector with constrained layout (GridView/Wrap) to fix RenderFlex overflow",
+          "Progress indicators and bottom navigation selected item color now react to the selected accent",
+          "General provider & rebuild fixes so theme changes propagate reliably across the app"
+        ],
+      },
       "v1.0.1": {
         "title": "Bug Fixes & Performance Improvements",
         "date": "2025-09-21",

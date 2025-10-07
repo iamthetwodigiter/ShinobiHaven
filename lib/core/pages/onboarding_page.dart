@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_onboarding_slider/flutter_onboarding_slider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shinobihaven/core/constants/accent_colors.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/core/theme/theme_provider.dart';
 import 'package:shinobihaven/core/utils/toast.dart';
@@ -78,9 +79,15 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
     ref.read(themeModeProvider.notifier).setTheme(mode);
   }
 
+  void _setAccentColor(Color accentColor) {
+    ref.read(themeModeProvider.notifier).setAccentColor(accentColor);
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    final availableWidth = (size.width - 60);
+    final accentColor = ref.watch(themeModeProvider.notifier).getAccentColor();
     return OnBoardingSlider(
       headerBackgroundColor: AppTheme.whiteGradient,
       controllerColor: Theme.brightnessOf(context) == Brightness.dark
@@ -214,9 +221,7 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
                         hintText: _namePlaceholders.elementAt(
                           _currentProfileChoice,
                         ),
-                        hintStyle: TextStyle(
-                          fontSize: 16,
-                        ),
+                        hintStyle: TextStyle(fontSize: 16),
                         labelText: 'Enter a Username',
                         labelStyle: TextStyle(
                           color: Theme.brightnessOf(context) == Brightness.dark
@@ -289,7 +294,6 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Spacer(),
               Column(
                 spacing: 15,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -307,7 +311,7 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
                   ),
                 ],
               ),
-              Spacer(),
+              SizedBox(height: 50),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -357,7 +361,39 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
                   ),
                 ],
               ),
-              Spacer(flex: 2),
+              SizedBox(height: 50),
+              Expanded(
+                child: GridView.count(
+                  padding: EdgeInsets.only(top: 8),
+                  crossAxisCount: (availableWidth ~/ 60).clamp(1, 6),
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  children: AccentColors.accentColors.map((color) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _setAccentColor(color);
+                            });
+                          },
+                          child: Container(
+                            height: 50,
+                            width: 50,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: color,
+                            ),
+                          ),
+                        ),
+                        if (color.toARGB32() == accentColor.toARGB32()) Icon(Icons.done),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+              SizedBox(height: 28),
             ],
           ),
         ),

@@ -420,7 +420,7 @@ class _LibraryPageState extends State<LibraryPage> {
                                         },
                                         icon: Icon(
                                           Icons.delete,
-                                          color: AppTheme.gradient2,
+                                          color: AppTheme.gradient1,
                                         ),
                                       ),
                                       onTap: () {

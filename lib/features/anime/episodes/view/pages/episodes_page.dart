@@ -281,7 +281,7 @@ class _EpisodesPageState extends ConsumerState<EpisodesPage> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Material(
         color: watched
-            ? AppTheme.gradient2.withValues(alpha: 0.15)
+            ? AppTheme.gradient1.withValues(alpha: 0.15)
             : AppTheme.blackGradient,
         borderRadius: BorderRadius.circular(12),
         elevation: watched ? 2 : 0,

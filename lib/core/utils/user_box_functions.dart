@@ -65,6 +65,17 @@ class UserBoxFunctions {
     return _userBox.get('profile', defaultValue: 'assets/images/naruto.jpg');
   }
 
+  static void setAccentColor(Color accentColor) {
+    _userBox.put('accentColor', accentColor);
+  }
+
+  static Color getAccentColor() {
+    final dynamic raw = _userBox.get('accentColor');
+    if (raw is Color) return raw;
+    if (raw is int) return Color(raw);
+    return Color.fromARGB(255, 219, 45, 105);
+  }
+
   static Future<String?> backupAllData() async {
     try {
       if (Platform.isAndroid) {

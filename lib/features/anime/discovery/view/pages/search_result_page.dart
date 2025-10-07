@@ -399,12 +399,12 @@ class _SearchResultPageState extends ConsumerState<SearchResultPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(Icons.error, color: AppTheme.gradient2, size: 48),
+              Icon(Icons.error, color: AppTheme.gradient1, size: 48),
               SizedBox(height: 16),
               Text(
                 'Error occured while fetching the data.\nPlease check your internet connection or try again later.',
                 style: TextStyle(
-                  color: AppTheme.gradient2,
+                  color: AppTheme.gradient1,
                   fontWeight: FontWeight.bold,
                 ),
               ),
