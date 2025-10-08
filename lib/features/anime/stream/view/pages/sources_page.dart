@@ -53,7 +53,8 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
   bool _isDisposing = false;
   Timer? _initializationTimer;
 
-  String get _stableCacheKey => '${widget.anime.slug}-${_currentPlayingEpisode?.episodeID ?? ''}';
+  String get _stableCacheKey =>
+      '${widget.anime.slug}-${_currentPlayingEpisode?.episodeID ?? ''}';
 
   String _getSectionKey() {
     return '${widget.anime.slug}-${widget.anime.type}-${widget.anime.image}';
@@ -1079,11 +1080,10 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
             },
           ),
           actions: [
-            if (_videoReady && !_isDisposing)
-              IconButton(
-                icon: Icon(Icons.info_outline, color: AppTheme.whiteGradient),
-                onPressed: _showEpisodeInfo,
-              ),
+            IconButton(
+              icon: Icon(Icons.info_outline, color: AppTheme.whiteGradient),
+              onPressed: _showEpisodeInfo,
+            ),
           ],
         ),
         body: SafeArea(

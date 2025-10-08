@@ -223,7 +223,7 @@ class _UpdateSettingsSheetState extends ConsumerState<UpdateSettingsSheet> {
           
           SizedBox(height: 20),
           
-          Container(
+          SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(

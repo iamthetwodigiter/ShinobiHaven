@@ -1329,6 +1329,7 @@ class ChangelogPage extends StatelessWidget {
               final notes = (data is Map && data['notes'] is List)
                   ? List<String>.from(data['notes'])
                   : <String>[];
+              final isLatest = (data is Map && data['latest'] != null);
 
               return Card(
                 shape: RoundedRectangleBorder(
@@ -1356,7 +1357,33 @@ class ChangelogPage extends StatelessWidget {
                             ),
                             if (date != null) ...[
                               SizedBox(height: 4),
-                              Text(date, style: TextStyle(fontSize: 12)),
+                              Row(
+                                spacing: 8,
+                                children: [
+                                  Text(date, style: TextStyle(fontSize: 12)),
+                                  if (isLatest)
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primaryGreen.withValues(
+                                          alpha: 0.25,
+                                        ),
+                                        border: Border.all(
+                                          color: AppTheme.primaryGreen,
+                                          width: 0.5,
+                                        ),
+                                        borderRadius: BorderRadius.circular(5),
+                                      ),
+                                      child: Text(
+                                        'Latest',
+                                        style: TextStyle(fontSize: 14),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ],
                           ],
                         ),
@@ -1552,7 +1579,7 @@ class _ManageAppDataState extends State<ManageAppData> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Location: ${Platform.isAndroid ? 'Downloads folder' : 'Documents folder'}',
+                    'Location: ${Platform.isAndroid ? 'ShinobiHaven folder' : 'Documents folder'}',
                   ),
                   SizedBox(height: 8),
                   Text(
@@ -1654,13 +1681,13 @@ class _ManageAppDataState extends State<ManageAppData> {
             builder: (context) => AlertDialog(
               title: Text('Restore Complete'),
               content: Text(
-                'Your data has been successfully restored from the backup file!\n\nPlease restart the app for all changes to take effect properly.',
+                'Your data has been successfully restored from the backup file!\n\nRestarting the app for all changes to take effect properly.',
               ),
               actions: [
                 TextButton(
                   onPressed: () {
-                    Restart.restartApp();
                     Navigator.pop(context);
+                    Restart.restartApp();
                   },
                   child: Text(
                     'OK',

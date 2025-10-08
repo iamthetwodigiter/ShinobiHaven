@@ -3,7 +3,18 @@ class AppDetails {
   static const String developer = "thetwodigiter";
   static const bool isBeta = false;
   static const String repoURL = "https://github.com/iamthetwodigiter/ShinobiHaven";
+  static const String appDirectory = '/storage/emulated/0/ShinobiHaven/Backup/';
   static const List<Map<String, dynamic>> changelogs = [
+    {
+      "v1.0.2-hotfix": {
+        "title": "Backup Functionality Fixed",
+        "date": "2025-10-08",
+        "latest": true,
+        "notes": [
+          "Fixed the broken backup feature, cause when saving accentColor trying to store data of type MaterialAccentColor",
+        ],
+      },
+    },
     {
       "v1.0.2": {
         "title": "Accent & Theme Improvements",

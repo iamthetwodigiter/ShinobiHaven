@@ -5,7 +5,6 @@ import 'package:shinobihaven/core/utils/user_box_functions.dart';
 import 'package:shinobihaven/features/anime/common/view/pages/profile_page.dart';
 import 'package:shinobihaven/features/anime/discovery/view/pages/favorites_page.dart';
 import 'package:shinobihaven/features/anime/discovery/view/pages/library_page.dart';
-import 'package:shinobihaven/features/anime/download/view/pages/download_page.dart';
 import 'package:shinobihaven/features/anime/home/view/pages/home_page.dart';
 
 class LandingPage extends StatefulWidget {
@@ -24,7 +23,6 @@ class _LandingPageState extends State<LandingPage> {
     // SearchPage(),
     FavoritesPage(),
     LibraryPage(),
-    DownloadsPage(),
     ProfilePage(),
   ];
 
@@ -183,10 +181,10 @@ class _LandingPageState extends State<LandingPage> {
             icon: Icon(Icons.view_list),
             label: 'Library',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.download),
-            label: 'Downlods',
-          ),
+          // BottomNavigationBarItem(
+          //   icon: Icon(Icons.download),
+          //   label: 'Downlods',
+          // ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),

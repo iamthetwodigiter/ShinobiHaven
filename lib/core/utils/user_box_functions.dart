@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shinobihaven/core/constants/app_details.dart';
+import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/features/anime/common/model/anime.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 
@@ -66,14 +68,14 @@ class UserBoxFunctions {
   }
 
   static void setAccentColor(Color accentColor) {
-    _userBox.put('accentColor', accentColor);
+    _userBox.put('accentColor', accentColor.toARGB32());
   }
 
   static Color getAccentColor() {
     final dynamic raw = _userBox.get('accentColor');
     if (raw is Color) return raw;
     if (raw is int) return Color(raw);
-    return Color.fromARGB(255, 219, 45, 105);
+    return AppTheme.gradient1;
   }
 
   static Future<String?> backupAllData() async {
@@ -101,7 +103,7 @@ class UserBoxFunctions {
       final Map<String, dynamic> backupData = {
         'metadata': {
           'backupDate': DateTime.now().toIso8601String(),
-          'appVersion': '1.0.0',
+          'appVersion': AppDetails.version,
           'backupVersion': '1.0',
           'deviceInfo': Platform.operatingSystem,
         },
@@ -115,9 +117,9 @@ class UserBoxFunctions {
 
       Directory? directory;
       if (Platform.isAndroid) {
-        directory = Directory('/storage/emulated/0/Downloads/ShinobiHaven/');
-        if (!await directory.exists()) {
-          await directory.create();
+        directory = Directory(AppDetails.appDirectory);
+        if (!directory.existsSync()) {
+           directory.createSync();
           directory = await getExternalStorageDirectory();
         }
       } else if (Platform.isIOS) {
