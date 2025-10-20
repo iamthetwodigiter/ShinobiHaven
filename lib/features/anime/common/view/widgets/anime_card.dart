@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/features/anime/common/model/anime.dart';
 import 'package:shinobihaven/features/anime/details/view/pages/anime_details_page.dart';
 
@@ -46,6 +47,19 @@ class AnimeCard extends StatelessWidget {
                 placeholder: (context, url) {
                   return Center(child: CircularProgressIndicator.adaptive());
                 },
+                errorWidget: (context, url, error) {
+                  return Column(
+                    spacing: 8,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error, color: AppTheme.gradient1),
+                      Text(
+                        'Image not found',
+                        style: TextStyle(fontWeight: FontWeight.w400),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -54,11 +68,13 @@ class AnimeCard extends StatelessWidget {
             width: size?.width ?? 150,
             child: Text(
               anime.title,
-              style: textStyle ?? TextStyle(
-                // color: AppTheme.whiteGradient,
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
+              style:
+                  textStyle ??
+                  TextStyle(
+                    // color: AppTheme.whiteGradient,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
               maxLines: twoLineTitle ? 2 : 1,
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,

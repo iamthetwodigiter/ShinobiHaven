@@ -388,6 +388,24 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
 
             forwardSkipTimeInMilliseconds: 10000,
             backwardSkipTimeInMilliseconds: 10000,
+
+            playIcon: Icons.play_arrow_rounded,
+            pauseIcon: Icons.pause,
+            muteIcon: Icons.volume_up_rounded,
+            unMuteIcon: Icons.volume_off_rounded,
+            pipMenuIcon: Icons.picture_in_picture_rounded,
+            skipBackIcon: Icons.fast_rewind_rounded,
+            skipForwardIcon: Icons.fast_forward_rounded,
+            qualitiesIcon: Icons.high_quality_rounded,
+            subtitlesIcon: Icons.subtitles,
+            audioTracksIcon: Icons.music_note_rounded,
+            playbackSpeedIcon: Icons.speed_rounded,
+            fullscreenEnableIcon: Icons.fullscreen_rounded,
+            fullscreenDisableIcon: Icons.fullscreen_exit_rounded,
+
+            overflowMenuIconsColor: AppTheme.gradient1,
+            overflowModalTextColor: AppTheme.gradient1,
+            overflowModalColor: AppTheme.blackGradient,
           ),
 
           subtitlesConfiguration: BetterPlayerSubtitlesConfiguration(
@@ -856,6 +874,11 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
   Widget _buildEpisodesList() {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 15),
+      padding: EdgeInsets.only(top: 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppTheme.gradient1, width: 0.5),
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -871,7 +894,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
             ),
           ),
           Container(
-            height: 200,
+            height: 225,
             padding: EdgeInsets.all(10),
             child: GridView.builder(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -1069,7 +1092,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
             overflow: TextOverflow.ellipsis,
           ),
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios, color: AppTheme.whiteGradient),
+            icon: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
             onPressed: () {
               if (!_isDisposing) {
                 _stopAndDisposePlayer();
@@ -1174,6 +1197,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                       return SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Padding(
                               padding: EdgeInsets.all(15),

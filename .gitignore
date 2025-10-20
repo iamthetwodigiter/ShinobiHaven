@@ -46,3 +46,4 @@ app.*.map.json
 
 # USER DEFINED
 /lib/core/config/
+.env
