@@ -3,8 +3,24 @@ class AppDetails {
   static const String developer = "thetwodigiter";
   static const bool isBeta = false;
   static const String repoURL = "https://github.com/iamthetwodigiter/ShinobiHaven";
-  static const String appDirectory = '/storage/emulated/0/ShinobiHaven/Backup/';
+  static const String appBackupDirectory = '/storage/emulated/0/ShinobiHaven/Backup/';
+  static const String appDownloadsDirectory = '/storage/emulated/0/ShinobiHaven/Downloads/';
   static const List<Map<String, dynamic>> changelogs = [
+    {
+      "v1.1.0": {
+        "title": "Downloads support & New Features",
+        "date": "2025-10-28",
+        "notes": [
+          "Added Downloads page to manage offline episodes",
+          "Implemented episode download functionality with progress tracking",
+          "Track downloads with notification updates",
+          "Download queue management and error handling",
+          "Improved video player stability and performance",
+          "Enhanced user interface for better navigation and usability",
+          "Fixed various bugs and improved overall app performance",
+        ],
+      },
+    },
     {
       "v1.0.2-hotfix": {
         "title": "Backup Functionality Fixed",
@@ -112,9 +128,9 @@ class AppDetails {
         "title": "Planned Features",
         "notes": [
           "Manga reading support with integrated viewer",
-          "Offline download functionality for episodes",
+          // "Offline download functionality for episodes",
           "Cloud synchronization for cross-device data sharing",
-          "Advanced sorting and filtering options for library management",
+          // "Advanced sorting and filtering options for library management",
           "User ratings and reviews system for anime",
           "Personal notes and comments for anime entries",
           "Enhanced recommendation system based on watch history",

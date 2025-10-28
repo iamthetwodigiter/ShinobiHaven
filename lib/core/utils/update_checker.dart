@@ -10,7 +10,7 @@ import 'package:android_intent_plus/android_intent.dart';
 import 'package:shinobihaven/core/constants/app_details.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/core/utils/toast.dart';
-import 'package:shinobihaven/core/utils/notification_service.dart';
+import 'package:shinobihaven/core/services/notification_service.dart';
 import 'package:toastification/toastification.dart';
 
 class GitHubRelease {
@@ -762,6 +762,7 @@ class UpdateChecker {
       await NotificationServiceExtensions.showDownloadCompleted(
         id: NotificationIds.updateComplete,
         itemName: 'ShinobiHaven ${release.tagName}',
+        description: 'ShinobiHaven ${release.tagName} is ready! Tap to install.',
         channel: NotificationChannel.updates,
         actionText: 'Install Now',
         actionId: 'install',

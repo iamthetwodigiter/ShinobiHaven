@@ -10,7 +10,7 @@ import 'package:shinobihaven/core/services/background_update_service.dart';
 import 'package:shinobihaven/core/theme/accent_color_adapter.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/core/theme/theme_provider.dart';
-import 'package:shinobihaven/core/utils/notification_service.dart';
+import 'package:shinobihaven/core/services/notification_service.dart';
 import 'package:shinobihaven/features/anime/common/model/anime.dart';
 
 void main() async {
@@ -56,9 +56,13 @@ class _ShinobiHavenState extends ConsumerState<ShinobiHaven> {
   void _setupPermissions() async {
     await Permission.storage.request();
     await Permission.manageExternalStorage.request();
-    if(!Directory(AppDetails.appDirectory).existsSync()) {
-      Directory(AppDetails.appDirectory).createSync(recursive: true);
+    if(!Directory(AppDetails.appBackupDirectory).existsSync()) {
+      Directory(AppDetails.appBackupDirectory).createSync(recursive: true);
     }
+    if(!Directory(AppDetails.appDownloadsDirectory).existsSync()) {
+      Directory(AppDetails.appDownloadsDirectory).createSync(recursive: true);
+    }
+    
   }
 
   void _initBox() async {

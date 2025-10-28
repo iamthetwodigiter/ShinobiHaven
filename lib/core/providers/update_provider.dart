@@ -40,7 +40,7 @@ class UpdateSettings {
 class UpdateSettingsNotifier extends StateNotifier<UpdateSettings> {
   UpdateSettingsNotifier() : super(UpdateSettings(
     autoCheckEnabled: true,
-    checkIntervalHours: 12,
+    checkIntervalHours: 1,
     lastCheck: 0,
     failureCount: 0,
   )) {
@@ -51,7 +51,7 @@ class UpdateSettingsNotifier extends StateNotifier<UpdateSettings> {
     final settings = BackgroundUpdateService.getSettings();
     state = UpdateSettings(
       autoCheckEnabled: settings['enabled'] ?? true,
-      checkIntervalHours: settings['interval'] ?? 12,
+      checkIntervalHours: settings['interval'] ?? 1,
       lastCheck: settings['lastCheck'] ?? 0,
       dismissedVersion: settings['dismissedVersion'],
       failureCount: settings['failureCount'] ?? 0,

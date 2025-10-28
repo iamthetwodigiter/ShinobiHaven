@@ -977,12 +977,12 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        SizedBox(width: 20),
                         Expanded(
                           child: GestureDetector(
                             onTap: _handleWatchNow,
                             child: Container(
                               padding: EdgeInsets.all(8),
-                              margin: EdgeInsets.symmetric(horizontal: 15),
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(15),
@@ -1052,7 +1052,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                           ),
                         ),
 
-                        SizedBox(width: 10),
+                        SizedBox(width: 20),
 
                         Expanded(
                           child: GestureDetector(
@@ -1072,7 +1072,6 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                             },
                             child: Container(
                               padding: EdgeInsets.all(12),
-                              margin: EdgeInsets.symmetric(horizontal: 15),
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(15),
@@ -1104,6 +1103,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                             ),
                           ),
                         ),
+                        SizedBox(width: 30),
                       ],
                     ),
 

@@ -420,7 +420,7 @@ class _EpisodesPageState extends ConsumerState<EpisodesPage> {
             },
             icon: Icon(
               _isFavorite ? Icons.favorite : Icons.favorite_border_rounded,
-              color: _isFavorite ? AppTheme.gradient1 : AppTheme.whiteGradient,
+              color: AppTheme.gradient1,
             ),
           ),
         ],

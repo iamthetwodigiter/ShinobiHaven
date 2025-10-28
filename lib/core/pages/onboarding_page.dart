@@ -128,9 +128,9 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
         fontWeight: FontWeight.bold,
       ),
       finishButtonStyle: FinishButtonStyle(
-        backgroundColor: AppTheme.primaryBlack,
-        foregroundColor: AppTheme.whiteGradient,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: AppTheme.transparentColor,
+        foregroundColor: AppTheme.gradient1,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       ),
       background: [SizedBox(), SizedBox(), SizedBox(), SizedBox()],
       centerBackground: true,
@@ -387,7 +387,8 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
                             ),
                           ),
                         ),
-                        if (color.toARGB32() == accentColor.toARGB32()) Icon(Icons.done),
+                        if (color.toARGB32() == accentColor.toARGB32())
+                          Icon(Icons.done),
                       ],
                     );
                   }).toList(),
@@ -436,7 +437,7 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
               SwitchListTile.adaptive(
                 value: _userConsent,
                 inactiveThumbColor: AppTheme.greyGradient,
-                activeColor: AppTheme.whiteGradient,
+                activeThumbColor: AppTheme.whiteGradient,
                 onChanged: (consent) {
                   setState(() {
                     _userConsent = consent;

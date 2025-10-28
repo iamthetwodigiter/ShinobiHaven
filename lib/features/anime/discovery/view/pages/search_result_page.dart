@@ -328,7 +328,7 @@ class _SearchResultPageState extends ConsumerState<SearchResultPage> {
                                                 ),
                                                 iconSize: 18,
                                                 padding: EdgeInsets.zero,
-                                                value: selectedValue,
+                                                initialValue: selectedValue,
                                                 items: options.entries.map((
                                                   opt,
                                                 ) {

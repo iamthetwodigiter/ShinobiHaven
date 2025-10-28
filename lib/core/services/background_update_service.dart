@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shinobihaven/core/constants/app_details.dart';
-import 'package:shinobihaven/core/utils/notification_service.dart';
+import 'package:shinobihaven/core/services/notification_service.dart';
 import 'package:shinobihaven/core/utils/update_checker.dart';
 
 class BackgroundUpdateService {
@@ -16,10 +16,9 @@ class BackgroundUpdateService {
   static const String _autoCheckEnabledKey = 'auto_check_enabled';
   static const String _failureCountKey = 'failure_count';
   static const String _lastFailureKey = 'last_failure_time';
-  
-  static const int defaultCheckIntervalHours = 12;
-  static const int minCheckIntervalHours = 6;
-  static const int maxCheckIntervalHours = 72;
+  static const int defaultCheckIntervalHours = 1;
+  static const int minCheckIntervalHours = 1;
+  static const int maxCheckIntervalHours = 24;
   static const int maxFailureCount = 3;
   
   static Timer? _periodicTimer;

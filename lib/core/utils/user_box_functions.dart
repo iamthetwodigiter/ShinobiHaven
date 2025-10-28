@@ -116,7 +116,7 @@ class UserBoxFunctions {
 
       Directory? directory;
       if (Platform.isAndroid) {
-        directory = Directory(AppDetails.appDirectory);
+        directory = Directory(AppDetails.appBackupDirectory);
         if (!directory.existsSync()) {
            directory.createSync();
           directory = await getExternalStorageDirectory();

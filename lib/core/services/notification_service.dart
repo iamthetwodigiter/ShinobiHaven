@@ -48,10 +48,14 @@ class NotificationService {
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
+    const linuxSettings = LinuxInitializationSettings(
+      defaultActionName: 'Open',
+    );
 
     const settings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
+      linux: linuxSettings,
     );
 
     await _notifications.initialize(settings);
@@ -252,6 +256,7 @@ extension NotificationServiceExtensions on NotificationService {
     required int id,
     required String itemName,
     required NotificationChannel channel,
+    required String description,
     String? actionText,
     String? actionId,
     String? filePath,
@@ -275,7 +280,7 @@ extension NotificationServiceExtensions on NotificationService {
     await NotificationService.showSimpleNotification(
       id: id,
       title: 'Download Complete',
-      description: '$itemName is ready! Tap to install.',
+      description: description,
       channel: channel,
       actions: actions,
       playSound: true,

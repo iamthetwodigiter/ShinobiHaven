@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:shinobihaven/core/config/config.dart';
 import 'package:shinobihaven/features/anime/details/model/anime_details.dart';
 import 'package:http/http.dart' as http;
