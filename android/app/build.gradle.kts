@@ -1,8 +1,17 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val keystoreProperties = Properties()
+val keystoreFile = rootProject.file("key.properties")
+if (keystoreFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystoreFile))
 }
 
 android {
@@ -13,7 +22,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        // coreLibraryDesugaringEnabled = true
         isCoreLibraryDesugaringEnabled = true
     }
 
@@ -26,17 +34,31 @@ android {
         applicationId = "com.thetwodigiter.shinobihaven"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled = true
+    }
+
+    signingConfigs {
+        create("release") {
+            keystoreProperties.getProperty("storeFile")?.let { storeFile = file(it) }
+            keystoreProperties.getProperty("storePassword")?.let { storePassword = it }
+            keystoreProperties.getProperty("keyAlias")?.let { keyAlias = it }
+            keystoreProperties.getProperty("keyPassword")?.let { keyPassword = it }
+        }
     }
 
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+            isShrinkResources = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }

@@ -6,6 +6,7 @@ import 'package:shinobihaven/features/anime/common/view/pages/profile_page.dart'
 import 'package:shinobihaven/features/anime/discovery/view/pages/favorites_page.dart';
 import 'package:shinobihaven/features/anime/discovery/view/pages/library_page.dart';
 import 'package:shinobihaven/features/anime/home/view/pages/home_page.dart';
+import 'package:shinobihaven/features/download/view/pages/downloads_page.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -20,8 +21,8 @@ class _LandingPageState extends State<LandingPage> {
 
   List<Widget> get _pages => [
     HomePage(),
-    // SearchPage(),
     FavoritesPage(),
+    DownloadsPage(),
     LibraryPage(),
     ProfilePage(),
   ];
@@ -69,7 +70,9 @@ class _LandingPageState extends State<LandingPage> {
       builder: (context) {
         return Container(
           decoration: BoxDecoration(
-            color: AppTheme.blackGradient,
+            color: UserBoxFunctions.isDarkMode(context)
+                ? AppTheme.blackGradient
+                : AppTheme.whiteGradient,
             borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
           ),
           padding: EdgeInsets.symmetric(horizontal: 15, vertical: 16),
@@ -172,19 +175,18 @@ class _LandingPageState extends State<LandingPage> {
 
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          // BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
           BottomNavigationBarItem(
             icon: Icon(Icons.favorite),
             label: 'Favorites',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.download),
+            label: 'Downlods',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.view_list),
             label: 'Library',
           ),
-          // BottomNavigationBarItem(
-          //   icon: Icon(Icons.download),
-          //   label: 'Downlods',
-          // ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),

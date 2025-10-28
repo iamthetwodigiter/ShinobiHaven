@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
+import 'package:shinobihaven/core/utils/toast.dart';
 import 'package:shinobihaven/features/anime/common/model/anime.dart';
 import 'package:shinobihaven/features/anime/episodes/dependency_injection/servers_provider.dart';
 import 'package:shinobihaven/features/anime/episodes/model/episodes.dart';
@@ -12,7 +13,10 @@ import 'package:shinobihaven/features/anime/stream/dependency_injection/sources_
 import 'package:shinobihaven/features/anime/stream/model/sources.dart';
 import 'package:shinobihaven/core/utils/library_box_functions.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:shinobihaven/features/download/dependency_injection/downloads_provider.dart';
+import 'package:shinobihaven/features/download/repository/downloads_repository.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:toastification/toastification.dart';
 
 class SourcesPage extends ConsumerStatefulWidget {
   final Anime anime;
@@ -52,6 +56,10 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
   String _loadingMessage = '';
   bool _isDisposing = false;
   Timer? _initializationTimer;
+  static const Duration _seekDuration = Duration(seconds: 5);
+  bool _showSeekOverlay = false;
+  String _seekOverlayText = '';
+  Timer? _seekOverlayTimer;
 
   String get _stableCacheKey =>
       '${widget.anime.slug}-${_currentPlayingEpisode?.episodeID ?? ''}';
@@ -99,6 +107,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
 
     _forceDisposePlayer();
     _disableWakelock();
+    _cancelSeekOverlay();
 
     try {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -204,7 +213,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
             .where((server) => server.serverName == 'MegaCloud')
             .toList();
 
-        _availableServers = [...filteredSubServers, ...filteredDubServers];
+        _availableServers = [...filteredDubServers, ...filteredSubServers];
 
         if (_availableServers.isNotEmpty) {
           if (widget.serverID != null) {
@@ -229,14 +238,17 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
           }
         }
       }
-    } catch (e) {
+    } catch (e, st) {
       if (mounted && !_isDisposing) {
         setState(() {
           _hasError = true;
-          _errorMessage = 'Failed to load servers: $e';
+          _errorMessage =
+              'Unable to load servers. Please check your connection and try again.';
           _isLoadingNewEpisode = false;
           _isLoadingServers = false;
         });
+        debugPrint('[_loadServersAndStream] error: $e');
+        debugPrintStack(stackTrace: st);
       }
     }
   }
@@ -259,11 +271,12 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         await Future.delayed(Duration(milliseconds: 100));
       }
 
-      if (_isDisposing || !mounted) return;
-
-      await ref
-          .read(sourcesViewModelProvider.notifier)
-          .getSources(server.dataID);
+      if (_isDisposing) return;
+      if (mounted) {
+        await ref
+            .read(sourcesViewModelProvider.notifier)
+            .getSources(server.dataID);
+      }
 
       if (_isDisposing || !mounted) return;
 
@@ -308,15 +321,18 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
           _loadingMessage = 'Starting playback...';
         });
       }
-    } catch (e) {
+    } catch (e, st) {
       if (mounted && !_isDisposing) {
         setState(() {
           _hasError = true;
-          _errorMessage = 'Failed to load stream: ${e.toString()}';
+          _errorMessage =
+              'Unable to prepare the video stream. Try switching servers or retrying.';
           _isLoadingNewEpisode = false;
           _isLoadingSources = false;
           _isLoadingVidSrc = false;
         });
+        debugPrint('[_loadStreamForServer] error: $e');
+        debugPrintStack(stackTrace: st);
       }
     }
   }
@@ -386,8 +402,8 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
             loadingColor: AppTheme.gradient1,
             backgroundColor: AppTheme.primaryBlack,
 
-            forwardSkipTimeInMilliseconds: 10000,
-            backwardSkipTimeInMilliseconds: 10000,
+            forwardSkipTimeInMilliseconds: _seekDuration.inMilliseconds,
+            backwardSkipTimeInMilliseconds: _seekDuration.inMilliseconds,
 
             playIcon: Icons.play_arrow_rounded,
             pauseIcon: Icons.pause,
@@ -470,13 +486,18 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
       );
 
       _setInitializationTimer();
-    } catch (e) {
+    } catch (e, st) {
       if (mounted && !_isDisposing) {
         setState(() {
           _hasError = true;
-          _errorMessage = 'Failed to setup video player. Trying next server...';
+          _errorMessage =
+              'Video player failed to start. Trying another server.';
           _isLoadingNewEpisode = false;
         });
+        debugPrint(
+          '[_setupBetterPlayer] error setting up player for $videoUrl: $e',
+        );
+        debugPrintStack(stackTrace: st);
         _tryNextServerOnError();
       }
     }
@@ -502,9 +523,13 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     if (mounted && !_isDisposing) {
       setState(() {
         _hasError = true;
-        _errorMessage = 'Video initialization timed out. Trying next server...';
+        _errorMessage =
+            'Video initialization timed out. Trying another server.';
         _isLoadingNewEpisode = false;
       });
+      debugPrint(
+        '[_handleInitializationTimeout] initialization timed out for $_videoURL',
+      );
       _tryNextServerOnError();
     }
   }
@@ -606,6 +631,51 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     _disableWakelock();
     _videoURL = null;
     _cancelInitializationTimer();
+    _cancelSeekOverlay();
+  }
+
+  void _cancelSeekOverlay() {
+    _seekOverlayTimer?.cancel();
+    _seekOverlayTimer = null;
+    if (_showSeekOverlay) {
+      _showSeekOverlay = false;
+      if (mounted) setState(() {});
+    }
+  }
+
+  Future<void> _handleDoubleTapSeek(bool forward) async {
+    if (_isDisposing || _betterPlayerController == null) return;
+    try {
+      final videoController = _betterPlayerController!.videoPlayerController;
+      final current = videoController?.value.position ?? Duration.zero;
+      final total = videoController?.value.duration;
+
+      Duration target = forward
+          ? current + _seekDuration
+          : current - _seekDuration;
+      if (target.isNegative) target = Duration.zero;
+      if (total != null && target > total) target = total;
+
+      try {
+        await _betterPlayerController!.seekTo(target);
+      } catch (_) {
+        try {
+          await videoController?.seekTo(target);
+        } catch (_) {}
+      }
+
+      _seekOverlayText = (forward
+          ? '+${_seekDuration.inSeconds}s'
+          : '-${_seekDuration.inSeconds}s');
+      _showSeekOverlay = true;
+      if (mounted) setState(() {});
+
+      _seekOverlayTimer?.cancel();
+      _seekOverlayTimer = Timer(Duration(milliseconds: 900), () {
+        _showSeekOverlay = false;
+        if (mounted) setState(() {});
+      });
+    } catch (_) {}
   }
 
   Future<void> _stopAndDisposePlayer() async {
@@ -613,6 +683,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     _isDisposing = true;
     try {
       _cancelInitializationTimer();
+      _cancelSeekOverlay();
 
       if (_betterPlayerController != null) {
         try {
@@ -741,7 +812,57 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: _betterPlayerController != null && _videoReady && !_isDisposing
-            ? BetterPlayer(controller: _betterPlayerController!)
+            ? Stack(
+                fit: StackFit.passthrough,
+                children: [
+                  BetterPlayer(controller: _betterPlayerController!),
+
+                  Positioned.fill(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onDoubleTap: () => _handleDoubleTapSeek(false),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onDoubleTap: () => _handleDoubleTapSeek(true),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  if (_showSeekOverlay)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Center(
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              _seekOverlayText,
+                              style: TextStyle(
+                                color: AppTheme.whiteGradient,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              )
             : Container(
                 color: AppTheme.primaryBlack,
                 child: Center(
@@ -762,7 +883,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                       if (_currentServer != null) ...[
                         SizedBox(height: 8),
                         Text(
-                          'Server: ${_currentServer!.serverName}',
+                          'Server: ${_currentServer!.serverName} (${_currentServer!.type})',
                           style: TextStyle(
                             color: AppTheme.whiteGradient.withValues(
                               alpha: 0.7,
@@ -786,14 +907,499 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.only(left: 15, bottom: 10),
-            child: Text(
-              'Available Servers',
-              style: TextStyle(
-                color: AppTheme.gradient1,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            padding: EdgeInsets.only(left: 15, bottom: 10, right: 15),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Available Servers',
+                  style: TextStyle(
+                    color: AppTheme.gradient1,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (_videoReady)
+                  IconButton(
+                    icon: Icon(
+                      Icons.download,
+                      color: AppTheme.gradient1,
+                    ),
+                    onPressed: () async {
+                      final vidState = ref.read(
+                        vidSrcSourcesProvider(_stableCacheKey),
+                      );
+                      if (!vidState.hasValue || vidState.value == null) {
+                        Toast(
+                          context: context,
+                          title: 'No stream',
+                          description: 'Final stream not ready yet',
+                          type: ToastificationType.error,
+                        );
+                        return;
+                      }
+
+                      final megaCloudServers = _availableServers
+                          .where((s) => s.serverName == 'MegaCloud')
+                          .toList();
+
+                      if (megaCloudServers.isEmpty) {
+                        Toast(
+                          context: context,
+                          title: 'No MegaCloud servers',
+                          description: 'No downloadable servers available',
+                          type: ToastificationType.error,
+                        );
+                        return;
+                      }
+
+                      final selectedServer = await showModalBottomSheet<Server>(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: AppTheme.blackGradient,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(16),
+                          ),
+                        ),
+                        builder: (ctx) {
+                          return SafeArea(
+                            child: Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.only(
+                                top: 12,
+                                left: 12,
+                                right: 12,
+                                bottom: 18,
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.greyGradient,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  SizedBox(height: 12),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      'Choose from a server',
+                                      style: TextStyle(
+                                        color: AppTheme.gradient1,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: 12),
+                                  Row(
+                                    children: megaCloudServers.map((s) {
+                                      return Expanded(
+                                        child: Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                          ),
+                                          child: ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  AppTheme.primaryBlack,
+                                              side: BorderSide(
+                                                color: AppTheme.gradient1,
+                                              ),
+                                              padding: EdgeInsets.symmetric(
+                                                vertical: 12,
+                                              ),
+                                            ),
+                                            onPressed: () =>
+                                                Navigator.of(ctx).pop(s),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  s.type.toUpperCase(),
+                                                  style: TextStyle(
+                                                    color: AppTheme.gradient1,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                SizedBox(height: 4),
+                                                Text(
+                                                  s.serverName,
+                                                  style: TextStyle(
+                                                    color: AppTheme
+                                                        .whiteGradient
+                                                        .withValues(alpha: 0.7),
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                  SizedBox(height: 12),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+
+                      if (selectedServer == null) return;
+
+                      showModalBottomSheet<void>(
+                        // ignore: use_build_context_synchronously
+                        context: context,
+                        isDismissible: false,
+                        backgroundColor: AppTheme.blackGradient,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(16),
+                          ),
+                        ),
+                        builder: (ctx) {
+                          return SafeArea(
+                            child: Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(vertical: 24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircularProgressIndicator(
+                                    color: AppTheme.gradient1,
+                                  ),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'Loading qualities...',
+                                    style: TextStyle(
+                                      color: AppTheme.whiteGradient,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+
+                      final sourcesRepo = ref.read(sourcesRepositoryProvider);
+                      List<SourceFile> qualitySources = [];
+                      List<HlsVariant> hlsVariants = [];
+                      bool isHlsMaster = false;
+
+                      try {
+                        final sourcesObj = await sourcesRepo.getSources(
+                          selectedServer.dataID,
+                        );
+                        final vidSrc = await sourcesRepo.getVidSrcSources(
+                          sourcesObj.dataID,
+                          sourcesObj.key,
+                        );
+
+                        if (vidSrc.sources.isNotEmpty) {
+                          final master = vidSrc.sources.firstWhere(
+                            (s) =>
+                                s.fileURL.toLowerCase().contains('.m3u8') ||
+                                s.type.toLowerCase().contains('hls'),
+                            orElse: () => vidSrc.sources.first,
+                          );
+
+                          if (master.fileURL.toLowerCase().contains('.m3u8') ||
+                              master.type.toLowerCase().contains('hls')) {
+                            isHlsMaster = true;
+                            try {
+                              hlsVariants = await DownloadsRepository()
+                                  .listHlsVariants(master.fileURL);
+                            } catch (e) {
+                              hlsVariants = [];
+                            }
+                          } else {
+                            qualitySources = vidSrc.sources.toList();
+                            qualitySources.sort(
+                              (a, b) =>
+                                  _qualityScore(a).compareTo(_qualityScore(b)),
+                            );
+                          }
+                        } else {}
+                      } catch (_) {
+                      } finally {
+                        // ignore: use_build_context_synchronously
+                        Navigator.pop(context);
+                      }
+
+                      if (isHlsMaster) {
+                        final selectedVariant =
+                            await showModalBottomSheet<HlsVariant>(
+                              // ignore: use_build_context_synchronously
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: AppTheme.blackGradient,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(16),
+                                ),
+                              ),
+                              builder: (ctx) {
+                                final maxHeight =
+                                    MediaQuery.of(ctx).size.height * 0.6;
+                                return SafeArea(
+                                  child: Container(
+                                    width: double.infinity,
+                                    constraints: BoxConstraints(
+                                      maxHeight: maxHeight,
+                                    ),
+                                    padding: EdgeInsets.only(
+                                      top: 12,
+                                      left: 12,
+                                      right: 12,
+                                      bottom: 12,
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 4,
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.greyGradient,
+                                            borderRadius: BorderRadius.circular(
+                                              2,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(height: 12),
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            'Select Quality',
+                                            style: TextStyle(
+                                              color: AppTheme.gradient1,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(height: 8),
+                                        Expanded(
+                                          child: hlsVariants.isEmpty
+                                              ? _emptyFormatsWidget(ctx)
+                                              : ListView.separated(
+                                                  itemCount: hlsVariants.length,
+                                                  separatorBuilder: (_, __) =>
+                                                      Divider(
+                                                        color: AppTheme
+                                                            .gradient1
+                                                            .withValues(
+                                                              alpha: 0.12,
+                                                            ),
+                                                      ),
+                                                  itemBuilder: (ctx2, i) {
+                                                    final v = hlsVariants[i];
+                                                    final title =
+                                                        v.resolution ??
+                                                        (v.bandwidth != null
+                                                            ? '${(v.bandwidth! / 1000).toStringAsFixed(0)} kbps'
+                                                            : 'Variant ${i + 1}');
+                                                    return ListTile(
+                                                      title: Text(
+                                                        title,
+                                                        style: TextStyle(
+                                                          color: AppTheme
+                                                              .whiteGradient,
+                                                        ),
+                                                      ),
+                                                      subtitle: Text(
+                                                        'HLS media',
+                                                        style: TextStyle(
+                                                          color: AppTheme
+                                                              .whiteGradient
+                                                              .withValues(
+                                                                alpha: 0.6,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      onTap: () => Navigator.of(
+                                                        ctx,
+                                                      ).pop(v),
+                                                    );
+                                                  },
+                                                ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                        if (selectedVariant == null) return;
+
+                        ref
+                            .read(downloadsProvider.notifier)
+                            .startDownload(
+                              animeSlug: widget.anime.slug,
+                              animeTitle: widget.anime.title,
+                              episodeId:
+                                  _currentPlayingEpisode?.episodeID ?? '',
+                              episodeNumber:
+                                  _currentPlayingEpisode?.episodeNumber ?? '',
+                              title:
+                                  _currentPlayingEpisode?.title ??
+                                  widget.anime.title,
+                              serverId: selectedServer.dataID,
+                              url: selectedVariant.uri,
+                              posterUrl: widget.anime.image,
+                              captions: vidState.value!.captions,
+                            );
+                      } else {
+                        final selectedSource =
+                            await showModalBottomSheet<SourceFile>(
+                              // ignore: use_build_context_synchronously
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: AppTheme.blackGradient,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(16),
+                                ),
+                              ),
+                              builder: (ctx) {
+                                final maxHeight =
+                                    MediaQuery.of(ctx).size.height * 0.6;
+                                return SafeArea(
+                                  child: Container(
+                                    width: double.infinity,
+                                    constraints: BoxConstraints(
+                                      maxHeight: maxHeight,
+                                    ),
+                                    padding: EdgeInsets.only(
+                                      top: 12,
+                                      left: 12,
+                                      right: 12,
+                                      bottom: 12,
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 4,
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.greyGradient,
+                                            borderRadius: BorderRadius.circular(
+                                              2,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(height: 12),
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            'Select Quality',
+                                            style: TextStyle(
+                                              color: AppTheme.gradient1,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(height: 8),
+                                        Expanded(
+                                          child: qualitySources.isEmpty
+                                              ? _emptyFormatsWidget(ctx)
+                                              : ListView.separated(
+                                                  itemCount:
+                                                      qualitySources.length,
+                                                  separatorBuilder: (_, __) =>
+                                                      Divider(
+                                                        color: AppTheme
+                                                            .gradient1
+                                                            .withValues(
+                                                              alpha: 0.12,
+                                                            ),
+                                                      ),
+                                                  itemBuilder: (ctx2, i) {
+                                                    final s = qualitySources[i];
+                                                    final label =
+                                                        s.type.isNotEmpty
+                                                        ? s.type
+                                                        : s.fileURL
+                                                              .split('/')
+                                                              .last;
+                                                    final subtitle =
+                                                        s.fileURL.contains(
+                                                          '.m3u8',
+                                                        )
+                                                        ? 'HLS media'
+                                                        : s.fileURL;
+                                                    return ListTile(
+                                                      title: Text(
+                                                        label,
+                                                        style: TextStyle(
+                                                          color: AppTheme
+                                                              .whiteGradient,
+                                                        ),
+                                                      ),
+                                                      subtitle: Text(
+                                                        subtitle,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: TextStyle(
+                                                          color: AppTheme
+                                                              .whiteGradient
+                                                              .withValues(
+                                                                alpha: 0.6,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      onTap: () => Navigator.of(
+                                                        ctx,
+                                                      ).pop(s),
+                                                    );
+                                                  },
+                                                ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+
+                        if (selectedSource == null) return;
+                        ref
+                            .read(downloadsProvider.notifier)
+                            .startDownload(
+                              animeSlug: widget.anime.slug,
+                              animeTitle: widget.anime.title,
+                              episodeId:
+                                  _currentPlayingEpisode?.episodeID ?? '',
+                              episodeNumber:
+                                  _currentPlayingEpisode?.episodeNumber ?? '',
+                              title:
+                                  _currentPlayingEpisode?.title ??
+                                  widget.anime.title,
+                              serverId: selectedServer.dataID,
+                              url: selectedSource.fileURL,
+                              posterUrl: widget.anime.image,
+                              captions: vidState.value!.captions,
+                            );
+                      }
+                      Toast(
+                        // ignore: use_build_context_synchronously
+                        context: context,
+                        title: 'Download queued',
+                        description:
+                            'Episode ${_currentPlayingEpisode?.episodeNumber ?? ''} added to downloads',
+                        type: ToastificationType.success,
+                      );
+                    },
+                  ),
+              ],
             ),
           ),
           SizedBox(
@@ -865,6 +1471,48 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                 );
               },
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _qualityScore(SourceFile s) {
+    try {
+      final t = s.type.toLowerCase();
+      final match = RegExp(r'(\d{3,4})p?').firstMatch(t);
+      if (match != null) return int.tryParse(match.group(1) ?? '0') ?? 0;
+      final resMatch = RegExp(r'(\d{3,4})x(\d{3,4})').firstMatch(s.type);
+      if (resMatch != null) return int.tryParse(resMatch.group(2) ?? '0') ?? 0;
+      final urlMatch = RegExp(r'(\d{3,4})p').firstMatch(s.fileURL);
+      if (urlMatch != null) return int.tryParse(urlMatch.group(1) ?? '0') ?? 0;
+    } catch (_) {}
+    return 0;
+  }
+
+  Widget _emptyFormatsWidget(BuildContext ctx) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.wifi_off, color: AppTheme.gradient1, size: 42),
+          SizedBox(height: 8),
+          Text(
+            'No formats found',
+            style: TextStyle(color: AppTheme.whiteGradient),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'No downloadable formats could be loaded from this server.',
+            style: TextStyle(
+              color: AppTheme.whiteGradient.withValues(alpha: 0.6),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 12),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Close', style: TextStyle(color: AppTheme.gradient1)),
           ),
         ],
       ),
