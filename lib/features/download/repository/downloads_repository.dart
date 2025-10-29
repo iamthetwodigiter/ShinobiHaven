@@ -32,7 +32,7 @@ class HlsVariant {
 
 class DownloadsRepository {
   static DownloadsRepository? _instance;
-  late final Dio _dio;
+  final Dio _dio = Dio();
 
   final Map<String, Map<String, dynamic>> _activeDownloads = {};
   final ValueNotifier<List<Map<String, dynamic>>> activeDownloads =
@@ -41,7 +41,6 @@ class DownloadsRepository {
   DownloadsRepository._internal();
   factory DownloadsRepository() {
     _instance ??= DownloadsRepository._internal();
-    _instance!._dio = Dio();
     return _instance!;
   }
 
@@ -314,7 +313,8 @@ class DownloadsRepository {
                 id: completeNotificationId,
                 itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
                 channel: NotificationChannel.downloads,
-                description: '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
+                description:
+                    '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
                 filePath: finalMp4,
                 progressNotificationId: progressNotificationId,
               );
@@ -350,7 +350,8 @@ class DownloadsRepository {
               id: completeNotificationId,
               itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
               channel: NotificationChannel.downloads,
-              description: '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
+              description:
+                  '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
               filePath: savePath,
               progressNotificationId: progressNotificationId,
             );
@@ -394,7 +395,8 @@ class DownloadsRepository {
                 id: completeNotificationId,
                 itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
                 channel: NotificationChannel.downloads,
-                description: '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
+                description:
+                    '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
                 filePath: finalMp4,
                 progressNotificationId: progressNotificationId,
               );
@@ -430,7 +432,8 @@ class DownloadsRepository {
               id: completeNotificationId,
               itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
               channel: NotificationChannel.downloads,
-              description: '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
+              description:
+                  '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
               filePath: savePath,
               progressNotificationId: progressNotificationId,
             );
@@ -768,7 +771,9 @@ class DownloadsRepository {
     String? posterPath,
   }) async {
     try {
-      final appDoc = await getApplicationDocumentsDirectory();
+      final appDoc = (Platform.isAndroid || Platform.isIOS)
+          ? await getApplicationDocumentsDirectory()
+          : Directory(AppDetails.basePath);
       final indexFile = File(p.join(appDoc.path, 'downloads_index.json'));
       List<Map<String, dynamic>> list = [];
       if (indexFile.existsSync()) {
@@ -799,7 +804,9 @@ class DownloadsRepository {
   Future<List<Map<String, dynamic>>> loadDownloadsIndex() async {
     try {
       await _syncIndexWithDisk();
-      final appDoc = await getApplicationDocumentsDirectory();
+      final appDoc = (Platform.isAndroid || Platform.isIOS)
+          ? await getApplicationDocumentsDirectory()
+          : Directory(AppDetails.basePath);
       final indexFile = File(p.join(appDoc.path, 'downloads_index.json'));
       if (!indexFile.existsSync()) return [];
       final txt = await indexFile.readAsString();
@@ -813,7 +820,9 @@ class DownloadsRepository {
     try {
       final dirPath = await _getDownloadDirectoryPath();
       final baseDir = Directory(dirPath);
-      final appDoc = await getApplicationDocumentsDirectory();
+      final appDoc = (Platform.isAndroid || Platform.isIOS)
+          ? await getApplicationDocumentsDirectory()
+          : Directory(AppDetails.basePath);
       final indexFile = File(p.join(appDoc.path, 'downloads_index.json'));
 
       List<Map<String, dynamic>> indexList = [];
@@ -867,7 +876,7 @@ class DownloadsRepository {
                   }
                 } catch (_) {}
                 if (foundPoster != null) existing['posterPath'] = foundPoster;
-            }
+              }
             } else {
               final animeTitle = p.basename(p.dirname(entity.path));
               final filename = p.basenameWithoutExtension(entity.path);

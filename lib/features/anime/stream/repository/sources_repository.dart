@@ -28,7 +28,6 @@ class SourcesRepository {
         final data = jsonDecode(response.body);
         final vidSrc = VidSrcSource.fromMap(data);
         if (vidSrc.sources.isEmpty) {
-          // Raise error if sources is empty so UI can catch it
           throw Exception("No video sources available. Please try another episode or server.");
         }
         return vidSrc;

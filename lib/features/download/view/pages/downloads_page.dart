@@ -136,30 +136,65 @@ class _DownloadsPageState extends State<DownloadsPage> {
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: _refresh,
-                    child: _buildGroupsList(
-                      _completedList.where((e) {
-                        final ongoingPaths = _lastActiveIds.isEmpty
-                            ? <String>{}
-                            : _repo.activeDownloads.value
-                                  .map((d) => d['filePath'] as String?)
-                                  .whereType<String>()
+                    child: _completedList.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 32),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.download,
+                                    color: AppTheme.gradient1,
+                                    size: 84,
+                                  ),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'No downloads yet',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.gradient1,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  Text(
+                                    'Tap the download icon on any episodes to add it to your downloads',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : _buildGroupsList(
+                            _completedList.where((e) {
+                              final ongoingPaths = _lastActiveIds.isEmpty
+                                  ? <String>{}
+                                  : _repo.activeDownloads.value
+                                        .map((d) => d['filePath'] as String?)
+                                        .whereType<String>()
+                                        .toSet();
+                              final fp = e['filePath'] as String?;
+                              if (fp != null && ongoingPaths.contains(fp)) {
+                                return false;
+                              }
+                              final key =
+                                  '${e['animeTitle'] ?? ''}|${e['episodeNumber'] ?? ''}|${e['title'] ?? ''}';
+                              final ongoingKeys = _repo.activeDownloads.value
+                                  .map(
+                                    (d) =>
+                                        '${d['animeTitle'] ?? ''}|${d['episodeNumber'] ?? ''}|${d['title'] ?? ''}',
+                                  )
                                   .toSet();
-                        final fp = e['filePath'] as String?;
-                        if (fp != null && ongoingPaths.contains(fp)) {
-                          return false;
-                        }
-                        final key =
-                            '${e['animeTitle'] ?? ''}|${e['episodeNumber'] ?? ''}|${e['title'] ?? ''}';
-                        final ongoingKeys = _repo.activeDownloads.value
-                            .map(
-                              (d) =>
-                                  '${d['animeTitle'] ?? ''}|${d['episodeNumber'] ?? ''}|${d['title'] ?? ''}',
-                            )
-                            .toSet();
-                        if (ongoingKeys.contains(key)) return false;
-                        return true;
-                      }).toList(),
-                    ),
+                              if (ongoingKeys.contains(key)) return false;
+                              return true;
+                            }).toList(),
+                          ),
                   ),
                 ),
               ],

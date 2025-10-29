@@ -1,3 +1,4 @@
+// ...existing code...
 import 'dart:async';
 import 'package:better_player_plus/better_player_plus.dart';
 import 'package:flutter/material.dart';
@@ -112,7 +113,10 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     try {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('[SourcesPage.dispose] SystemChrome error: $e');
+      debugPrintStack(stackTrace: st);
+    }
 
     super.dispose();
   }
@@ -124,7 +128,10 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
       ref.invalidate(serversViewModelProvider);
       ref.invalidate(sourcesViewModelProvider);
       ref.invalidate(vidSrcSourcesProvider);
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('[SourcesPage._clearAnimeSpecificProviders] error: $e');
+      debugPrintStack(stackTrace: st);
+    }
   }
 
   @override
@@ -172,7 +179,10 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         ref.invalidate(sourcesViewModelProvider);
         ref.invalidate(vidSrcSourcesProvider);
         await Future.delayed(Duration(milliseconds: 200));
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('[SourcesPage._loadServersAndStream] invalidate error: $e');
+        debugPrintStack(stackTrace: st);
+      }
     }
 
     if (!mounted || _isDisposing) return;
@@ -267,7 +277,10 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         try {
           ref.invalidate(sourcesViewModelProvider);
           ref.invalidate(vidSrcSourcesProvider);
-        } catch (_) {}
+        } catch (e, st) {
+          debugPrint('[SourcesPage._loadStreamForServer] invalidate error: $e');
+          debugPrintStack(stackTrace: st);
+        }
         await Future.delayed(Duration(milliseconds: 100));
       }
 
@@ -297,15 +310,24 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         if (!_isDisposing && mounted) {
           try {
             ref.invalidate(vidSrcSourcesProvider);
-          } catch (_) {}
+          } catch (e, st) {
+            debugPrint('[SourcesPage._loadStreamForServer] vidSrc invalidate error: $e');
+            debugPrintStack(stackTrace: st);
+          }
           await Future.delayed(Duration(milliseconds: 100));
         }
 
         if (_isDisposing || !mounted) return;
 
-        await ref
-            .read(vidSrcSourcesProvider(_stableCacheKey).notifier)
-            .getVidSrcSources(sources.dataID, sources.key);
+        try {
+          await ref
+              .read(vidSrcSourcesProvider(_stableCacheKey).notifier)
+              .getVidSrcSources(sources.dataID, sources.key);
+        } catch (e, st) {
+          debugPrint('[SourcesPage._loadStreamForServer] getVidSrcSources error: $e');
+          debugPrintStack(stackTrace: st);
+          rethrow;
+        }
 
         if (!_isDisposing && mounted) {
           await Future.delayed(Duration(milliseconds: 500));
@@ -331,9 +353,9 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
           _isLoadingSources = false;
           _isLoadingVidSrc = false;
         });
-        debugPrint('[_loadStreamForServer] error: $e');
-        debugPrintStack(stackTrace: st);
       }
+      debugPrint('[_loadStreamForServer] error: $e');
+      debugPrintStack(stackTrace: st);
     }
   }
 
@@ -499,6 +521,9 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         );
         debugPrintStack(stackTrace: st);
         _tryNextServerOnError();
+      } else {
+        debugPrint('[_setupBetterPlayer] non-mounted error: $e');
+        debugPrintStack(stackTrace: st);
       }
     }
   }
@@ -608,13 +633,19 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
   void _enableWakelock() async {
     try {
       await WakelockPlus.enable();
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('[SourcesPage._enableWakelock] error: $e');
+      debugPrintStack(stackTrace: st);
+    }
   }
 
   void _disableWakelock() async {
     try {
       await WakelockPlus.disable();
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('[SourcesPage._disableWakelock] error: $e');
+      debugPrintStack(stackTrace: st);
+    }
   }
 
   void _forceDisposePlayer() {
@@ -623,7 +654,9 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         _betterPlayerController!.pause();
         _betterPlayerController!.setVolume(0.0);
         _betterPlayerController!.dispose();
-      } catch (_) {
+      } catch (e, st) {
+        debugPrint('[SourcesPage._forceDisposePlayer] dispose error: $e');
+        debugPrintStack(stackTrace: st);
       } finally {
         _betterPlayerController = null;
       }
@@ -658,10 +691,15 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
 
       try {
         await _betterPlayerController!.seekTo(target);
-      } catch (_) {
+      } catch (e, st) {
+        debugPrint('[SourcesPage._handleDoubleTapSeek] seek error: $e');
+        debugPrintStack(stackTrace: st);
         try {
           await videoController?.seekTo(target);
-        } catch (_) {}
+        } catch (e2, st2) {
+          debugPrint('[SourcesPage._handleDoubleTapSeek] fallback seek error: $e2');
+          debugPrintStack(stackTrace: st2);
+        }
       }
 
       _seekOverlayText = (forward
@@ -675,7 +713,10 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         _showSeekOverlay = false;
         if (mounted) setState(() {});
       });
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('[SourcesPage._handleDoubleTapSeek] unexpected error: $e');
+      debugPrintStack(stackTrace: st);
+    }
   }
 
   Future<void> _stopAndDisposePlayer() async {
@@ -689,13 +730,19 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         try {
           await _betterPlayerController!.pause();
           _betterPlayerController!.setVolume(0.0);
-        } catch (_) {}
+        } catch (e, st) {
+          debugPrint('[SourcesPage._stopAndDisposePlayer] pause error: $e');
+          debugPrintStack(stackTrace: st);
+        }
 
         await Future.delayed(Duration(milliseconds: 100));
 
         try {
           _betterPlayerController!.dispose();
-        } catch (_) {}
+        } catch (e, st) {
+          debugPrint('[SourcesPage._stopAndDisposePlayer] dispose error: $e');
+          debugPrintStack(stackTrace: st);
+        }
 
         _betterPlayerController = null;
       }
@@ -708,7 +755,10 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
           _videoURL = null;
         });
       }
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('[SourcesPage._stopAndDisposePlayer] unexpected error: $e');
+      debugPrintStack(stackTrace: st);
+    }
   }
 
   void _showEpisodeInfo() {
@@ -794,7 +844,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     );
   }
 
-  Widget _buildVideoPlayer() {
+Widget _buildVideoPlayer() {
     return Container(
       width: double.infinity,
       height: 250,
@@ -921,10 +971,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                 ),
                 if (_videoReady)
                   IconButton(
-                    icon: Icon(
-                      Icons.download,
-                      color: AppTheme.gradient1,
-                    ),
+                    icon: Icon(Icons.download, color: AppTheme.gradient1),
                     onPressed: () async {
                       final vidState = ref.read(
                         vidSrcSourcesProvider(_stableCacheKey),
@@ -1116,7 +1163,9 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                             try {
                               hlsVariants = await DownloadsRepository()
                                   .listHlsVariants(master.fileURL);
-                            } catch (e) {
+                            } catch (e, st) {
+                              debugPrint('[SourcesPage.downloads] listHlsVariants error: $e');
+                              debugPrintStack(stackTrace: st);
                               hlsVariants = [];
                             }
                           } else {
@@ -1126,8 +1175,12 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                                   _qualityScore(a).compareTo(_qualityScore(b)),
                             );
                           }
-                        } else {}
-                      } catch (_) {
+                        } else {
+                          debugPrint('[SourcesPage.downloads] vidSrc.sources is empty for server ${selectedServer.dataID}');
+                        }
+                      } catch (e, st) {
+                        debugPrint('[SourcesPage.downloads] error fetching sources for server ${selectedServer.dataID}: $e');
+                        debugPrintStack(stackTrace: st);
                       } finally {
                         // ignore: use_build_context_synchronously
                         Navigator.pop(context);
@@ -1486,7 +1539,10 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
       if (resMatch != null) return int.tryParse(resMatch.group(2) ?? '0') ?? 0;
       final urlMatch = RegExp(r'(\d{3,4})p').firstMatch(s.fileURL);
       if (urlMatch != null) return int.tryParse(urlMatch.group(1) ?? '0') ?? 0;
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('[SourcesPage._qualityScore] parse error: $e');
+      debugPrintStack(stackTrace: st);
+    }
     return 0;
   }
 
@@ -1594,7 +1650,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     );
   }
 
-  Widget _buildLoadingStep(String label, bool isActive, bool isCompleted) {
+Widget _buildLoadingStep(String label, bool isActive, bool isCompleted) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -1637,7 +1693,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
       ],
     );
   }
-
+  
   @override
   Widget build(BuildContext context) {
     if (_isDisposing) {
@@ -1936,3 +1992,4 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     );
   }
 }
+// ...existing code...

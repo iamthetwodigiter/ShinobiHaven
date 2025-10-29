@@ -1,14 +1,162 @@
+import 'dart:io';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
 class AppDetails {
-  static const String version = "v1.0.2";
+  static const String version = "v1.1.0";
   static const String developer = "thetwodigiter";
   static const bool isBeta = false;
-  static const String repoURL = "https://github.com/iamthetwodigiter/ShinobiHaven";
-  static const String appBackupDirectory = '/storage/emulated/0/ShinobiHaven/Backup/';
-  static const String appDownloadsDirectory = '/storage/emulated/0/ShinobiHaven/Downloads/';
+  static const String repoURL =
+      "https://github.com/iamthetwodigiter/ShinobiHaven";
+
+  static String _resolvedBasePath = '';
+
+  static Future<void> init() async {
+    try {
+      if (Platform.isAndroid) {
+        try {
+          final dir = await getExternalStorageDirectory();
+          if (dir != null && dir.path.isNotEmpty) {
+            _resolvedBasePath = p.join(dir.path, 'ShinobiHaven');
+            await _ensureAppDirsCreated(_resolvedBasePath);
+            return;
+          }
+        } catch (_) {}
+        _resolvedBasePath = '/storage/emulated/0/ShinobiHaven';
+        await _ensureAppDirsCreated(_resolvedBasePath);
+        return;
+      }
+
+      if (Platform.isIOS) {
+        try {
+          final dir = await getApplicationDocumentsDirectory();
+          _resolvedBasePath = p.join(dir.path, 'ShinobiHaven');
+          await _ensureAppDirsCreated(_resolvedBasePath);
+          return;
+        } catch (_) {}
+        final home = Platform.environment['HOME'] ?? '';
+        _resolvedBasePath = home.isNotEmpty
+            ? p.join(home, 'Documents', 'ShinobiHaven')
+            : 'Documents/ShinobiHaven';
+        await _ensureAppDirsCreated(_resolvedBasePath);
+        return;
+      }
+
+      if (Platform.isMacOS) {
+        final home = Platform.environment['HOME'] ?? '';
+        _resolvedBasePath = home.isNotEmpty
+            ? p.join(home, 'Documents', 'ShinobiHaven')
+            : 'Documents/ShinobiHaven';
+        await _ensureAppDirsCreated(_resolvedBasePath);
+        return;
+      }
+
+      if (Platform.isWindows) {
+        final userProfile = Platform.environment['USERPROFILE'] ?? '';
+        _resolvedBasePath = userProfile.isNotEmpty
+            ? p.join(userProfile, 'Documents', 'ShinobiHaven')
+            : p.join(
+                Platform.environment['HOME'] ?? '',
+                'Documents',
+                'ShinobiHaven',
+              );
+        await _ensureAppDirsCreated(_resolvedBasePath);
+        return;
+      }
+
+      _resolvedBasePath = _resolveLinuxDocumentsDir();
+      await _ensureAppDirsCreated(_resolvedBasePath);
+    } catch (_) {
+      _resolvedBasePath = Platform.environment['HOME'] != null
+          ? p.join(Platform.environment['HOME']!, 'Documents', 'ShinobiHaven')
+          : 'ShinobiHaven';
+      try {
+        await _ensureAppDirsCreated(_resolvedBasePath);
+      } catch (_) {}
+    }
+  }
+
+  static Future<void> _ensureAppDirsCreated(String basePath) async {
+    try {
+      if (basePath.isEmpty) return;
+      final baseDir = Directory(basePath);
+      if (!baseDir.existsSync()) {
+        await baseDir.create(recursive: true);
+      }
+
+      final downloadsDir = Directory(p.join(basePath, 'Downloads'));
+      if (!downloadsDir.existsSync()) {
+        await downloadsDir.create(recursive: true);
+      }
+
+      final backupDir = Directory(p.join(basePath, 'Backup'));
+      if (!backupDir.existsSync()) {
+        await backupDir.create(recursive: true);
+      }
+    } catch (_) {}
+  }
+
+  static String get basePath {
+    if (_resolvedBasePath.isNotEmpty) return _resolvedBasePath;
+    if (Platform.isAndroid) return '/storage/emulated/0/ShinobiHaven';
+    if (Platform.isIOS) {
+      return p.join(
+        Platform.environment['HOME'] ?? '',
+        'Documents',
+        'ShinobiHaven',
+      );
+    }
+    if (Platform.isMacOS) {
+      return p.join(
+        Platform.environment['HOME'] ?? '',
+        'Documents',
+        'ShinobiHaven',
+      );
+    }
+    if (Platform.isWindows) {
+      return p.join(
+        Platform.environment['USERPROFILE'] ??
+            Platform.environment['HOME'] ??
+            '',
+        'Documents',
+        'ShinobiHaven',
+      );
+    }
+    return _resolveLinuxDocumentsDir();
+  }
+
+  static String get appBackupDirectory =>
+      p.join(basePath, 'Backup') + p.separator;
+  static String get appDownloadsDirectory =>
+      p.join(basePath, 'Downloads') + p.separator;
+
+  static String _resolveLinuxDocumentsDir() {
+    final home = Platform.environment['HOME'] ?? '';
+    if (home.isEmpty) return 'Documents${p.separator}ShinobiHaven';
+    try {
+      final cfg = File(p.join(home, '.config', 'user-dirs.dirs'));
+      if (cfg.existsSync()) {
+        for (final line in cfg.readAsLinesSync()) {
+          final m = RegExp(
+            r'^\s*XDG_DOCUMENTS_DIR\s*=\s*(?:"(.*)"|(.*))\s*$',
+          ).firstMatch(line);
+          if (m != null) {
+            var val = m.group(1) ?? m.group(2) ?? '';
+            val = val.replaceAll(r'$HOME', home).replaceAll('"', '').trim();
+            if (val.isEmpty) continue;
+            if (val.startsWith('/')) return p.join(val, 'ShinobiHaven');
+            return p.join(home, val, 'ShinobiHaven');
+          }
+        }
+      }
+    } catch (_) {}
+    return p.join(home, 'Documents', 'ShinobiHaven');
+  }
+
   static const List<Map<String, dynamic>> changelogs = [
     {
       "v1.1.0": {
-        "title": "Downloads support & New Features",
+        "title": "Downloads Support Added",
         "date": "2025-10-28",
         "notes": [
           "Added Downloads page to manage offline episodes",
@@ -128,9 +276,7 @@ class AppDetails {
         "title": "Planned Features",
         "notes": [
           "Manga reading support with integrated viewer",
-          // "Offline download functionality for episodes",
           "Cloud synchronization for cross-device data sharing",
-          // "Advanced sorting and filtering options for library management",
           "User ratings and reviews system for anime",
           "Personal notes and comments for anime entries",
           "Enhanced recommendation system based on watch history",
