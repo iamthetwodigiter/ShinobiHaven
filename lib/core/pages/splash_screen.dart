@@ -34,18 +34,20 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: SizedBox(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 15,
-            children: [
-              Image(image: AssetImage('assets/images/launcher_icon-mono.png')),
-              CircularProgressIndicator.adaptive(),
-              Text(
-                "Kon'nichiwa Onii-chan",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ],
+        child: Center(
+          child: SizedBox(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              spacing: 15,
+              children: [
+                Image(image: AssetImage('assets/images/launcher_icon-mono.png')),
+                CircularProgressIndicator.adaptive(),
+                Text(
+                  "Kon'nichiwa Onii-chan",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
           ),
         ),
       ),

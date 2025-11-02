@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_onboarding_slider/flutter_onboarding_slider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -93,6 +94,7 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
       controllerColor: Theme.brightnessOf(context) == Brightness.dark
           ? AppTheme.whiteGradient
           : AppTheme.blackGradient,
+      skipIcon: Icon(Icons.arrow_forward, color: AppTheme.gradient1),
       onFinish: () {
         if (!_userConsent) {
           Toast(
@@ -130,6 +132,7 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
       finishButtonStyle: FinishButtonStyle(
         backgroundColor: AppTheme.transparentColor,
         foregroundColor: AppTheme.gradient1,
+        elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       ),
       background: [SizedBox(), SizedBox(), SizedBox(), SizedBox()],
@@ -240,8 +243,11 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
                     ),
                   ),
                   Text('Choose a profile', style: TextStyle(fontSize: 18)),
-                  SizedBox(
+                  Container(
                     width: size.width,
+                    margin: (Platform.isAndroid || Platform.isIOS)
+                        ? null
+                        : EdgeInsets.symmetric(horizontal: 150),
                     child: SingleChildScrollView(
                       child: Wrap(
                         alignment: WrapAlignment.spaceEvenly,
@@ -257,8 +263,12 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
                               });
                             },
                             child: Container(
-                              height: size.width / 4,
-                              width: size.width / 4,
+                              height: (Platform.isAndroid || Platform.isIOS)
+                                  ? size.width / 4
+                                  : 125,
+                              width: (Platform.isAndroid || Platform.isIOS)
+                                  ? size.width / 4
+                                  : 125,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: _currentProfileChoice == index
@@ -269,7 +279,7 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
                                     : null,
                               ),
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(100),
+                                borderRadius: BorderRadius.circular(125),
                                 child: Image.asset(
                                   asset,
                                   height: 95,
@@ -312,60 +322,68 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
                 ],
               ),
               SizedBox(height: 50),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ThemeChoice(
-                    currentThemeChoice: _currentThemeChoice,
-                    title: 'Light Mode',
-                    titleTextColor: AppTheme.blackGradient,
-                    themeColor: AppTheme.whiteGradient,
-                    themeMode: 0,
-                    onTap: () {
-                      setState(() {
-                        _currentThemeChoice = 0;
-                        _setThemeMode(0);
-                      });
-                    },
-                  ),
-                  ThemeChoice(
-                    currentThemeChoice: _currentThemeChoice,
-                    title: 'Dark Mode',
-                    titleTextColor: AppTheme.whiteGradient,
-                    themeColor: AppTheme.blackGradient,
-                    themeMode: 1,
-                    onTap: () {
-                      setState(() {
-                        _currentThemeChoice = 1;
-                        _setThemeMode(1);
-                      });
-                    },
-                  ),
-                  ThemeChoice(
-                    currentThemeChoice: _currentThemeChoice,
-                    title: 'System Choice',
-                    themeColor: Theme.brightnessOf(context) == Brightness.light
-                        ? AppTheme.whiteGradient
-                        : AppTheme.blackGradient,
-                    titleTextColor:
-                        Theme.brightnessOf(context) == Brightness.dark
-                        ? AppTheme.whiteGradient
-                        : AppTheme.blackGradient,
-                    themeMode: 2,
-                    onTap: () {
-                      setState(() {
-                        _currentThemeChoice = 2;
-                        _setThemeMode(2);
-                      });
-                    },
-                  ),
-                ],
+              Padding(
+                padding: (Platform.isAndroid || Platform.isIOS)
+                    ? EdgeInsets.zero
+                    : EdgeInsets.symmetric(horizontal: 200),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    ThemeChoice(
+                      currentThemeChoice: _currentThemeChoice,
+                      title: 'Light Mode',
+                      titleTextColor: AppTheme.blackGradient,
+                      themeColor: AppTheme.whiteGradient,
+                      themeMode: 0,
+                      onTap: () {
+                        setState(() {
+                          _currentThemeChoice = 0;
+                          _setThemeMode(0);
+                        });
+                      },
+                    ),
+                    ThemeChoice(
+                      currentThemeChoice: _currentThemeChoice,
+                      title: 'Dark Mode',
+                      titleTextColor: AppTheme.whiteGradient,
+                      themeColor: AppTheme.blackGradient,
+                      themeMode: 1,
+                      onTap: () {
+                        setState(() {
+                          _currentThemeChoice = 1;
+                          _setThemeMode(1);
+                        });
+                      },
+                    ),
+                    ThemeChoice(
+                      currentThemeChoice: _currentThemeChoice,
+                      title: 'System Choice',
+                      themeColor:
+                          Theme.brightnessOf(context) == Brightness.light
+                          ? AppTheme.whiteGradient
+                          : AppTheme.blackGradient,
+                      titleTextColor:
+                          Theme.brightnessOf(context) == Brightness.dark
+                          ? AppTheme.whiteGradient
+                          : AppTheme.blackGradient,
+                      themeMode: 2,
+                      onTap: () {
+                        setState(() {
+                          _currentThemeChoice = 2;
+                          _setThemeMode(2);
+                        });
+                      },
+                    ),
+                  ],
+                ),
               ),
               SizedBox(height: 50),
               Expanded(
                 child: GridView.count(
                   padding: EdgeInsets.only(top: 8),
-                  crossAxisCount: (availableWidth ~/ 60).clamp(1, 6),
+                  crossAxisCount: !(Platform.isAndroid || Platform.isIOS)
+                      ? 15
+                      : (availableWidth ~/ 60).clamp(1, 6),
                   mainAxisSpacing: 10,
                   crossAxisSpacing: 10,
                   children: AccentColors.accentColors.map((color) {

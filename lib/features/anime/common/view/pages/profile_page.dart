@@ -471,7 +471,10 @@ class _EditProfileState extends ConsumerState<EditProfile> {
                             'Choose a profile',
                             style: TextStyle(fontSize: 18),
                           ),
-                          SizedBox(
+                          Container(
+                            margin: (Platform.isAndroid || Platform.isIOS)
+                                ? null
+                                : EdgeInsets.symmetric(horizontal: 150),
                             child: SingleChildScrollView(
                               child: Wrap(
                                 alignment: WrapAlignment.spaceEvenly,
@@ -489,8 +492,14 @@ class _EditProfileState extends ConsumerState<EditProfile> {
                                       });
                                     },
                                     child: Container(
-                                      height: size.width / 4,
-                                      width: size.width / 4,
+                                      height:
+                                          (Platform.isAndroid || Platform.isIOS)
+                                          ? size.width / 4
+                                          : 125,
+                                      width:
+                                          (Platform.isAndroid || Platform.isIOS)
+                                          ? size.width / 4
+                                          : 125,
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         border: _currentProfileChoice == index
@@ -502,7 +511,7 @@ class _EditProfileState extends ConsumerState<EditProfile> {
                                       ),
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(
-                                          100,
+                                          125,
                                         ),
                                         child: Image.asset(
                                           asset,
@@ -630,7 +639,9 @@ class _SetDarkModeState extends ConsumerState<SetDarkMode> {
               Expanded(
                 child: GridView.count(
                   padding: EdgeInsets.only(top: 8),
-                  crossAxisCount: (availableWidth ~/ 75).clamp(1, 6),
+                  crossAxisCount: (Platform.isAndroid || Platform.isIOS)
+                      ? (availableWidth ~/ 75).clamp(1, 6)
+                      : 15,
                   mainAxisSpacing: 10,
                   crossAxisSpacing: 10,
                   children: AccentColors.accentColors.map((color) {

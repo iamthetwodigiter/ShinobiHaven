@@ -358,7 +358,6 @@ class DownloadsRepository {
           } catch (_) {}
         }
       } else {
-        // compute instantaneous speed correctly (bytes/sec).
         DateTime lastTick = DateTime.now();
         int lastReceived = 0;
         _dio.options.followRedirects = true;
@@ -682,7 +681,7 @@ class DownloadsRepository {
     if (subs.isEmpty) return inputPath;
     final dir = p.dirname(inputPath);
     final baseName = p.basenameWithoutExtension(inputPath);
-    final finalMp4 = p.join(dir, '$baseName.mp4');
+    final finalMp4 = p.join(dir, '${baseName}_with_subs.mp4');
 
     final converted = <Map<String, String>>[];
     for (final s in subs) {
@@ -734,6 +733,7 @@ class DownloadsRepository {
 
     final cmd =
         '-y ${inputs.toString()} ${maps.toString()} -c:v copy -c:a copy -c:s mov_text ${metadata.toString()} "${finalMp4.replaceAll('"', '\\"')}"';
+
     final completer = Completer<void>();
 
     FFmpegKit.executeAsync(
@@ -744,25 +744,76 @@ class DownloadsRepository {
           completer.complete();
         } else {
           final failTrace = await session.getFailStackTrace();
+          final logs = await session.getAllLogsAsString();
+          debugPrint(
+            '[_embedSubtitlesIntoMp4] FFmpeg failed: rc=${rc?.getValue()}',
+          );
+          debugPrint('[_embedSubtitlesIntoMp4] Logs: $logs');
+          debugPrint('[_embedSubtitlesIntoMp4] Stack: ${failTrace ?? 'none'}');
           completer.completeError(
             'embed failed rc=${rc?.getValue()} ${failTrace ?? ''}',
           );
         }
       },
-      (log) {},
+      (log) {
+        debugPrint('[FFmpeg] ${log.getMessage()}');
+      },
       (stats) {},
     );
 
-    await completer.future;
+    try {
+      await completer.future;
 
-    for (final s in converted) {
       try {
-        final f = File(s['path']!);
-        if (f.existsSync()) f.deleteSync();
-      } catch (_) {}
-    }
+        final origFile = File(inputPath);
+        if (origFile.existsSync()) {
+          origFile.deleteSync();
+        }
+      } catch (e) {
+        debugPrint('[_embedSubtitlesIntoMp4] Failed to delete original: $e');
+      }
 
-    return finalMp4;
+      try {
+        final finalFile = File(finalMp4);
+        if (finalFile.existsSync()) {
+          await finalFile.rename(inputPath);
+        }
+      } catch (e) {
+        debugPrint('[_embedSubtitlesIntoMp4] Failed to rename: $e');
+        for (final s in converted) {
+          try {
+            final f = File(s['path']!);
+            if (f.existsSync()) f.deleteSync();
+          } catch (_) {}
+        }
+        return finalMp4;
+      }
+
+      for (final s in converted) {
+        try {
+          final f = File(s['path']!);
+          if (f.existsSync()) f.deleteSync();
+        } catch (_) {}
+      }
+
+      return inputPath;
+    } catch (e) {
+      debugPrint('[_embedSubtitlesIntoMp4] Error: $e');
+
+      try {
+        final finalFile = File(finalMp4);
+        if (finalFile.existsSync()) finalFile.deleteSync();
+      } catch (_) {}
+
+      for (final s in converted) {
+        try {
+          final f = File(s['path']!);
+          if (f.existsSync()) f.deleteSync();
+        } catch (_) {}
+      }
+
+      rethrow;
+    }
   }
 
   Future<void> _recordCompletedDownload(

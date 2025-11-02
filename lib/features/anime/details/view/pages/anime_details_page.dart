@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/core/utils/favorites_box_functions.dart';
 import 'package:shinobihaven/core/utils/library_box_functions.dart';
@@ -43,6 +45,8 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
   );
 
   final Map<String, List<Anime>> _collections = {};
+
+  final bool _isDesktop = !(Platform.isAndroid || Platform.isIOS);
 
   void _loadCollections() {
     _collections.clear();
@@ -291,127 +295,180 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
   }
 
   Widget _generalDetailsTab(AnimeDetails anime) {
-    return Column(
-      children: [
-        Stack(
+    return Center(
+      child: Container(
+        constraints: BoxConstraints(maxWidth: 900),
+        child: Column(
+          spacing: 10,
           children: [
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 25, vertical: 20),
-              margin: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.brightnessOf(context) == Brightness.dark
-                        ? AppTheme.blackGradient
-                        : AppTheme.whiteGradient,
-                    AppTheme.gradient1.withValues(alpha: 0.2),
-                  ],
-                ),
-                border: Border.all(color: AppTheme.gradient1),
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.gradient1.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
+            Stack(
+              children: [
+                _isDesktop
+                    ? Container(
+                        padding: EdgeInsets.all(12),
+                        margin: EdgeInsets.only(bottom: 5),
+                        decoration: BoxDecoration(
+                          color: Theme.brightnessOf(context) == Brightness.dark
+                              ? AppTheme.blackGradient
+                              : AppTheme.whiteGradient,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppTheme.gradient1,
+                            width: 0.75,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Overview',
+                              style: TextStyle(
+                                color: AppTheme.gradient1,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              anime.description,
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: AppTheme.whiteGradient),
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: () =>
+                                  _showFullDescription(anime.description),
+                              child: Text(
+                                'Read more',
+                                style: TextStyle(color: AppTheme.gradient1),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 25,
+                          vertical: 20,
+                        ),
+                        margin: EdgeInsets.symmetric(
+                          horizontal: 15,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppTheme.gradient1),
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.gradient1.withValues(alpha: 0.1),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          anime.description,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                if (!_isDesktop)
+                  Positioned(
+                    top: 0,
+                    right: 5,
+                    child: IconButton(
+                      onPressed: () {
+                        _showFullDescription(anime.description);
+                      },
+                      icon: Icon(
+                        Icons.info_rounded,
+                        size: 22,
+                        color: AppTheme.gradient1,
+                      ),
+                      tooltip: "Show full description",
+                    ),
                   ),
-                ],
-              ),
-              child: Text(
-                anime.description,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Positioned(
-              top: 0,
-              right: 5,
-              child: IconButton(
-                onPressed: () {
-                  _showFullDescription(anime.description);
-                },
-                icon: Icon(
-                  Icons.info_rounded,
-                  size: 22,
-                  color: AppTheme.gradient1,
-                ),
-                tooltip: "Show full description",
-              ),
-            ),
-          ],
-        ),
-        Container(
-          padding: EdgeInsets.all(12),
-          margin: EdgeInsets.symmetric(horizontal: 15),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Theme.brightnessOf(context) == Brightness.dark
-                    ? AppTheme.blackGradient
-                    : AppTheme.whiteGradient,
-                AppTheme.gradient1.withValues(alpha: 0.1),
               ],
             ),
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: AppTheme.gradient1),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              if (anime.subCount != null)
-                _infoChip(Icons.closed_caption, 'Subbed', anime.subCount!),
-              if (anime.dubCount != null)
-                _infoChip(Icons.mic, 'Dubbed', anime.dubCount!),
-              _infoChip(Icons.hd, 'Quality', anime.quality),
-              _infoChip(Icons.timelapse_rounded, 'Duration', anime.duration),
-              _infoChip(Icons.question_mark_rounded, 'Type', anime.type),
-            ],
-          ),
-        ),
-        SizedBox(height: 15),
-        Wrap(
-          spacing: 10,
-          runSpacing: 8,
-          alignment: WrapAlignment.center,
-          children: List.generate(anime.genres.length, (index) {
-            final genre = anime.genres.elementAt(index);
-            return Chip(
-              label: Text(
-                genre.name,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.gradient1,
-                ),
+            Container(
+              padding: EdgeInsets.all(12),
+              margin: EdgeInsets.symmetric(horizontal: 15),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: AppTheme.gradient1),
               ),
-              shape: StadiumBorder(side: BorderSide(color: AppTheme.gradient1)),
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            );
-          }),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  if (anime.subCount != null)
+                    _infoChip(Icons.closed_caption, 'Subbed', anime.subCount!),
+                  if (anime.dubCount != null)
+                    _infoChip(Icons.mic, 'Dubbed', anime.dubCount!),
+                  _infoChip(Icons.hd, 'Quality', anime.quality),
+                  _infoChip(
+                    Icons.timelapse_rounded,
+                    'Duration',
+                    anime.duration,
+                  ),
+                  _infoChip(Icons.question_mark_rounded, 'Type', anime.type),
+                ],
+              ),
+            ),
+            SizedBox(height: 15),
+            Wrap(
+              spacing: 10,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: List.generate(anime.genres.length, (index) {
+                final genre = anime.genres.elementAt(index);
+                return Chip(
+                  label: Text(
+                    genre.name,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.gradient1,
+                    ),
+                  ),
+                  shape: StadiumBorder(
+                    side: BorderSide(color: AppTheme.gradient1),
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                );
+              }),
+            ),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+              margin: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: AppTheme.gradient1),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _richText('Anime Score: ', anime.score),
+                  if (anime.japanese != null)
+                    _richText('Japanese Name: ', anime.japanese!),
+                  if (anime.synonyms != null)
+                    _richText('Synonyms: ', anime.synonyms!),
+                  if (anime.aired != null) _richText('Aired: ', anime.aired!),
+                  if (anime.premiered != null)
+                    _richText('Premiered: ', anime.premiered!),
+                  _richText('Status: ', anime.status),
+                  _richText('Rating: ', anime.rating),
+                ],
+              ),
+            ),
+            SizedBox(height: 30),
+          ],
         ),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-          margin: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _richText('Anime Score: ', anime.score),
-              if (anime.japanese != null)
-                _richText('Japanese Name: ', anime.japanese!),
-              if (anime.synonyms != null)
-                _richText('Synonyms: ', anime.synonyms!),
-              if (anime.aired != null) _richText('Aired: ', anime.aired!),
-              if (anime.premiered != null)
-                _richText('Premiered: ', anime.premiered!),
-              _richText('Status: ', anime.status),
-              _richText('Rating: ', anime.rating),
-            ],
-          ),
-        ),
-        SizedBox(height: 30),
-      ],
+      ),
     );
   }
 
@@ -507,16 +564,18 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
               },
             ),
           )
-        : Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(height: 50),
-              Text(
-                'Nothing to watch here.\nTry searching something',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-            ],
+        : Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(height: 50),
+                Text(
+                  'Nothing to watch here.\nTry searching something',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           );
   }
 
@@ -698,6 +757,34 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
         );
       },
     );
+  }
+
+  void _shareAnime(String title) async {
+    final ShareParams params = ShareParams(
+      subject: 'Check out this anime!',
+      uri: Uri.parse('https://shinobihaven.com/anime/${widget.animeSlug}'),
+      mailToFallbackEnabled: false,
+    );
+    final result = await SharePlus.instance.share(params);
+    if (result.status == ShareResultStatus.success) {
+      if (mounted) {
+        Toast(
+          context: context,
+          title: 'Success',
+          description: 'Thanks for sharing $title with your friends!',
+          type: ToastificationType.success,
+        );
+      }
+    } else {
+      if (mounted) {
+        Toast(
+          context: context,
+          title: 'Failed',
+          description: 'Could not share $title. Please try again later.',
+          type: ToastificationType.error,
+        );
+      }
+    }
   }
 
   @override
@@ -886,102 +973,425 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
               },
               icon: Icon(Icons.add, color: AppTheme.gradient1, size: 28),
             ),
+
+            if (_anime != null)
+              IconButton(
+                onPressed: () => _shareAnime(_anime!.title),
+                icon: Icon(Icons.share),
+              ),
           ],
           orElse: () => [],
         ),
       ),
       body: animeDetailsData.when(
         data: (anime) {
-          _anime = Anime(
-            slug: widget.animeSlug,
-            link: '',
-            title: anime.title,
-            jname: anime.jname,
-            image: anime.image,
-            type: anime.type,
-            duration: anime.duration,
-            subCount: anime.subCount,
-            dubCount: anime.dubCount,
-          );
-
-          episodesData.whenData((episodes) {
-            if (_episodes.isEmpty || _episodes.length != episodes.length) {
-              _episodes = List.from(episodes);
-            }
-          });
-
-          return SafeArea(
-            child: SizedBox(
-              height: size.height,
-              width: size.width,
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    SizedBox(height: 16),
-                    Container(
-                      height: 300,
-                      width: 200,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.blackGradient,
-                            AppTheme.gradient1.withValues(alpha: 0.2),
+          final Widget childWidget = _isDesktop
+              ? Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 320,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              height: 420,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppTheme.blackGradient,
+                                    AppTheme.gradient1.withValues(alpha: 0.2),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(15),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.gradient1.withValues(
+                                      alpha: 0.2,
+                                    ),
+                                    blurRadius: 10,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(15),
+                                child: CachedNetworkImage(
+                                  imageUrl: anime.image,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) =>
+                                      Shimmer.fromColors(
+                                        baseColor: AppTheme.blackGradient,
+                                        highlightColor: AppTheme.gradient1
+                                            .withValues(alpha: 0.3),
+                                        child: Container(
+                                          color: AppTheme.blackGradient,
+                                        ),
+                                      ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                SizedBox(
+                                  height: 60,
+                                  width: 150,
+                                  child: GestureDetector(
+                                    onTap: _handleWatchNow,
+                                    child: Container(
+                                      width: size.width * 0.425,
+                                      padding: EdgeInsets.all(8),
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(15),
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            AppTheme.gradient1,
+                                            AppTheme.gradient1,
+                                          ],
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppTheme.gradient1
+                                                .withValues(alpha: 0.2),
+                                            blurRadius: 8,
+                                            offset: Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.play_arrow_rounded,
+                                            color: AppTheme.whiteGradient,
+                                            size: 24,
+                                          ),
+                                          SizedBox(width: 8),
+                                          ValueListenableBuilder(
+                                            valueListenable: Hive.box(
+                                              'library',
+                                            ).listenable(keys: ['lastWatched']),
+                                            builder: (context, box, child) {
+                                              final lastWatched =
+                                                  LibraryBoxFunction.getLastWatchedEpisode(
+                                                    widget.animeSlug,
+                                                  );
+                                              return Column(
+                                                children: [
+                                                  Text(
+                                                    lastWatched != null
+                                                        ? 'Resume'
+                                                        : 'Watch Now',
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: AppTheme
+                                                          .whiteGradient,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    lastWatched != null
+                                                        ? 'Episode $lastWatched'
+                                                        : 'Start from Episode 1',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: AppTheme
+                                                          .whiteGradient
+                                                          .withValues(
+                                                            alpha: 0.8,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                SizedBox(
+                                  height: 60,
+                                  width: 150,
+                                  child: GestureDetector(
+                                    onTap: () async {
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              EpisodesPage(anime: _anime!),
+                                        ),
+                                      );
+                                      setState(() {
+                                        _isFavorite =
+                                            FavoritesBoxFunctions.isFavorite(
+                                              widget.animeSlug,
+                                            );
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: EdgeInsets.all(10),
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: AppTheme.gradient1,
+                                        ),
+                                        color: Colors.transparent,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.list,
+                                            color: AppTheme.gradient1,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'All Episodes',
+                                            style: TextStyle(
+                                              color: AppTheme.gradient1,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            // Tabs selector
+                            Container(
+                              height: 50,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.gradient1.withValues(
+                                      alpha: 0.06,
+                                    ),
+                                    blurRadius: 6,
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  _tabItems(0, 'General'),
+                                  _tabItems(1, 'Producers'),
+                                  _tabItems(2, 'Seasons'),
+                                  _tabItems(3, 'Other'),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.gradient1.withValues(alpha: 0.2),
-                            blurRadius: 10,
-                            spreadRadius: 2,
-                          ),
-                        ],
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(15),
-                        child: CachedNetworkImage(
-                          imageUrl: anime.image,
-                          height: 300,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Shimmer.fromColors(
-                            baseColor: AppTheme.blackGradient,
-                            highlightColor: AppTheme.gradient1.withValues(
-                              alpha: 0.3,
+
+                      const SizedBox(width: 24),
+
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color:
+                                      Theme.brightnessOf(context) ==
+                                          Brightness.dark
+                                      ? AppTheme.blackGradient
+                                      : AppTheme.whiteGradient,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      if (_currentTabIndex == 0)
+                                        _generalDetailsTab(anime),
+                                      if (_currentTabIndex == 1)
+                                        _producersDetailsTab(anime),
+                                      if (_currentTabIndex == 2)
+                                        _seasonsDetailsTab(anime),
+                                      if (_currentTabIndex == 3)
+                                        _otherAnimesTab(anime),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
-                            child: Container(
-                              height: 300,
-                              width: 200,
-                              color: AppTheme.blackGradient,
+                            const SizedBox(height: 12),
+                            // Container(
+                            //   padding: const EdgeInsets.all(12),
+                            //   decoration: BoxDecoration(
+                            //     color: AppTheme.blackGradient,
+                            //     borderRadius: BorderRadius.circular(12),
+                            //   ),
+                            //   child: Column(
+                            //     crossAxisAlignment: CrossAxisAlignment.start,
+                            //     children: [
+                            //       Text(
+                            //         'Episodes',
+                            //         style: TextStyle(
+                            //           color: AppTheme.gradient1,
+                            //           fontWeight: FontWeight.bold,
+                            //         ),
+                            //       ),
+                            //       const SizedBox(height: 8),
+                            //       SizedBox(
+                            //         height: 200,
+                            //         child: ListView.separated(
+                            //           itemCount: _episodes.length,
+                            //           separatorBuilder: (_, __) =>
+                            //               const Divider(),
+                            //           itemBuilder: (context, idx) {
+                            //             final ep = _episodes.elementAt(idx);
+
+                            //             return ListTile(
+                            //               dense: true,
+                            //               title: Text(
+                            //                 'Episode ${ep.episodeNumber}',
+                            //                 style: TextStyle(
+                            //                   color: AppTheme.whiteGradient,
+                            //                 ),
+                            //               ),
+                            //               subtitle: Text(
+                            //                 ep.title,
+                            //                 style: TextStyle(
+                            //                   fontSize: 12,
+                            //                   color: AppTheme.whiteGradient
+                            //                       .withAlpha(160),
+                            //                 ),
+                            //               ),
+                            //               onTap: () {
+                            //                 // open sources page for selected episode
+                            //                 final sectionInfo =
+                            //                     '${anime.type}-${anime.image.hashCode}';
+                            //                 final uniqueKey =
+                            //                     '${widget.animeSlug}-${ep.episodeID}-$sectionInfo-${DateTime.now().millisecondsSinceEpoch}';
+                            //                 Navigator.push(
+                            //                   context,
+                            //                   MaterialPageRoute(
+                            //                     builder: (context) =>
+                            //                         SourcesPage(
+                            //                           key: ValueKey(uniqueKey),
+                            //                           anime:
+                            //                               _anime ??
+                            //                               Anime(
+                            //                                 slug: widget
+                            //                                     .animeSlug,
+                            //                                 link: '',
+                            //                                 title: anime.title,
+                            //                                 jname: anime.jname,
+                            //                                 image: anime.image,
+                            //                                 type: anime.type,
+                            //                                 duration:
+                            //                                     anime.duration,
+                            //                                 subCount:
+                            //                                     anime.subCount,
+                            //                                 dubCount:
+                            //                                     anime.dubCount,
+                            //                               ),
+                            //                           episodes: _episodes,
+                            //                           currentEpisode: ep,
+                            //                         ),
+                            //                   ),
+                            //                 );
+                            //               },
+                            //             );
+                            //           },
+                            //         ),
+                            //       ),
+                            //     ],
+                            //   ),
+                            // ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      SizedBox(height: 16),
+                      Container(
+                        height: 300,
+                        width: 200,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppTheme.blackGradient,
+                              AppTheme.gradient1.withValues(alpha: 0.2),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.gradient1.withValues(alpha: 0.2),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(15),
+                          child: CachedNetworkImage(
+                            imageUrl: anime.image,
+                            height: 300,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Shimmer.fromColors(
+                              baseColor: AppTheme.blackGradient,
+                              highlightColor: AppTheme.gradient1.withValues(
+                                alpha: 0.3,
+                              ),
+                              child: Container(
+                                height: 300,
+                                width: 200,
+                                color: AppTheme.blackGradient,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      anime.title,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.gradient1,
-                        shadows: [
-                          Shadow(
-                            color: AppTheme.gradient1.withValues(alpha: 0.2),
-                            blurRadius: 4,
-                          ),
-                        ],
+                      SizedBox(height: 12),
+                      Text(
+                        anime.title,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.gradient1,
+                          shadows: [
+                            Shadow(
+                              color: AppTheme.gradient1.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(width: 20),
-                        Expanded(
-                          child: GestureDetector(
+                      SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          GestureDetector(
                             onTap: _handleWatchNow,
                             child: Container(
+                              width: size.width * 0.425,
                               padding: EdgeInsets.all(8),
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
@@ -1050,12 +1460,8 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                               ),
                             ),
                           ),
-                        ),
 
-                        SizedBox(width: 20),
-
-                        Expanded(
-                          child: GestureDetector(
+                          GestureDetector(
                             onTap: () async {
                               await Navigator.push(
                                 context,
@@ -1071,6 +1477,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                               });
                             },
                             child: Container(
+                              width: size.width * 0.425,
                               padding: EdgeInsets.all(12),
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
@@ -1102,43 +1509,64 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                               ),
                             ),
                           ),
-                        ),
-                        SizedBox(width: 30),
-                      ],
-                    ),
+                        ],
+                      ),
 
-                    SizedBox(height: 18),
-                    Container(
-                      height: 50,
-                      width: size.width,
-                      margin: EdgeInsets.symmetric(horizontal: 15),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.gradient1.withValues(alpha: 0.2),
-                            blurRadius: 4,
-                          ),
-                        ],
+                      SizedBox(height: 18),
+                      Container(
+                        height: 50,
+                        width: size.width,
+                        margin: EdgeInsets.symmetric(horizontal: 15),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.gradient1.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            _tabItems(0, 'General'),
+                            _tabItems(1, 'Producers'),
+                            _tabItems(2, 'Seasons'),
+                            _tabItems(3, 'Other'),
+                          ],
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          _tabItems(0, 'General'),
-                          _tabItems(1, 'Producers'),
-                          _tabItems(2, 'Seasons'),
-                          _tabItems(3, 'Other'),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    if (_currentTabIndex == 0) _generalDetailsTab(anime),
-                    if (_currentTabIndex == 1) _producersDetailsTab(anime),
-                    if (_currentTabIndex == 2) _seasonsDetailsTab(anime),
-                    if (_currentTabIndex == 3) _otherAnimesTab(anime),
-                    SizedBox(height: 30),
-                  ],
-                ),
-              ),
+                      SizedBox(height: 10),
+                      if (_currentTabIndex == 0) _generalDetailsTab(anime),
+                      if (_currentTabIndex == 1) _producersDetailsTab(anime),
+                      if (_currentTabIndex == 2) _seasonsDetailsTab(anime),
+                      if (_currentTabIndex == 3) _otherAnimesTab(anime),
+                      SizedBox(height: 30),
+                    ],
+                  ),
+                );
+          _anime = Anime(
+            slug: widget.animeSlug,
+            link: '',
+            title: anime.title,
+            jname: anime.jname,
+            image: anime.image,
+            type: anime.type,
+            duration: anime.duration,
+            subCount: anime.subCount,
+            dubCount: anime.dubCount,
+          );
+
+          episodesData.whenData((episodes) {
+            if (_episodes.isEmpty || _episodes.length != episodes.length) {
+              _episodes = List.from(episodes);
+            }
+          });
+
+          return SafeArea(
+            child: SizedBox(
+              height: size.height,
+              width: size.width,
+              child: childWidget,
             ),
           );
         },

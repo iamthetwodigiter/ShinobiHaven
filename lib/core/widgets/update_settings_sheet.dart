@@ -85,7 +85,8 @@ class _UpdateSettingsSheetState extends ConsumerState<UpdateSettingsSheet> {
                 ),
               ),
               value: _autoCheckEnabled,
-              activeThumbColor: AppTheme.gradient1,
+              activeThumbColor: AppTheme.whiteGradient,
+              activeTrackColor: AppTheme.gradient1,
               onChanged: (value) {
                 setState(() {
                   _autoCheckEnabled = value;

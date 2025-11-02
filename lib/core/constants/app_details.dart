@@ -3,7 +3,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 class AppDetails {
-  static const String version = "v1.1.0";
+  static const String version = "v1.1.1";
   static const String developer = "thetwodigiter";
   static const bool isBeta = false;
   static const String repoURL =
@@ -155,6 +155,29 @@ class AppDetails {
 
   static const List<Map<String, dynamic>> changelogs = [
     {
+      "v1.1.1": {
+        "title": "Released Linux Version",
+        "date": "2025-11-01",
+        "latest": true,
+        "notes": [
+          "Added support for Linux platforms",
+          "# LINUX",
+            "- Implemented separate video player for desktop platforms",
+            "- Adjusted UI for larger screens and window resizing",
+            "- Added keyboard shortcuts for navigation and playback control",
+            "- Added quality selection options in video player settings",
+            "- Added subtitle choices in video player settings",
+            "- Improved file system access for backups",
+            "- Enhanced performance optimizations for desktop environments",
+          "# ANDROID & iOS",
+            "- Enhanced video player with better buffering and error handling",
+            "- Added support for skipping intros and outros",
+            "- Added fullscreen controls and gestures",
+            "- Added link sharing functionality for anime",
+            "- Added support for app to open supported links directly",
+          "Fixed minor bugs and improved overall user experience",
+        ],
+      },
       "v1.1.0": {
         "title": "Downloads Support Added",
         "date": "2025-10-28",
@@ -173,7 +196,6 @@ class AppDetails {
       "v1.0.2-hotfix": {
         "title": "Backup Functionality Fixed",
         "date": "2025-10-08",
-        "latest": true,
         "notes": [
           "Fixed the broken backup feature, cause when saving accentColor trying to store data of type MaterialAccentColor",
         ],

@@ -1,5 +1,5 @@
-// ...existing code...
 import 'dart:async';
+import 'dart:io';
 import 'package:better_player_plus/better_player_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,6 +14,7 @@ import 'package:shinobihaven/features/anime/stream/dependency_injection/sources_
 import 'package:shinobihaven/features/anime/stream/model/sources.dart';
 import 'package:shinobihaven/core/utils/library_box_functions.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:shinobihaven/features/anime/stream/view/pages/linux_video_player.dart';
 import 'package:shinobihaven/features/download/dependency_injection/downloads_provider.dart';
 import 'package:shinobihaven/features/download/repository/downloads_repository.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -61,6 +62,12 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
   bool _showSeekOverlay = false;
   String _seekOverlayText = '';
   Timer? _seekOverlayTimer;
+  Timer? _skipOverlayTimer;
+  bool _showSkipIntro = false;
+  bool _showSkipOutro = false;
+  TimeStamps? _currentIntro;
+  TimeStamps? _currentOutro;
+  OverlayEntry? _fullscreenOverlay;
 
   String get _stableCacheKey =>
       '${widget.anime.slug}-${_currentPlayingEpisode?.episodeID ?? ''}';
@@ -109,6 +116,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     _forceDisposePlayer();
     _disableWakelock();
     _cancelSeekOverlay();
+    _cancelSkipOverlay();
 
     try {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -311,7 +319,9 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
           try {
             ref.invalidate(vidSrcSourcesProvider);
           } catch (e, st) {
-            debugPrint('[SourcesPage._loadStreamForServer] vidSrc invalidate error: $e');
+            debugPrint(
+              '[SourcesPage._loadStreamForServer] vidSrc invalidate error: $e',
+            );
             debugPrintStack(stackTrace: st);
           }
           await Future.delayed(Duration(milliseconds: 100));
@@ -324,7 +334,9 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
               .read(vidSrcSourcesProvider(_stableCacheKey).notifier)
               .getVidSrcSources(sources.dataID, sources.key);
         } catch (e, st) {
-          debugPrint('[SourcesPage._loadStreamForServer] getVidSrcSources error: $e');
+          debugPrint(
+            '[SourcesPage._loadStreamForServer] getVidSrcSources error: $e',
+          );
           debugPrintStack(stackTrace: st);
           rethrow;
         }
@@ -355,6 +367,240 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         });
       }
       debugPrint('[_loadStreamForServer] error: $e');
+      debugPrintStack(stackTrace: st);
+    }
+  }
+
+  void _startSkipOverlayTimer(TimeStamps? intro, TimeStamps? outro) {
+    _cancelSkipOverlay();
+    _currentIntro = intro;
+    _currentOutro = outro;
+    if (_betterPlayerController == null) return;
+
+    _skipOverlayTimer = Timer.periodic(Duration(milliseconds: 500), (timer) {
+      if (_isDisposing || !mounted || _betterPlayerController == null) {
+        timer.cancel();
+        return;
+      }
+
+      final controller = _betterPlayerController!.videoPlayerController;
+      if (controller == null || !controller.value.initialized) return;
+
+      final currentPosition = controller.value.position.inSeconds;
+      bool shouldShowIntro = false;
+      bool shouldShowOutro = false;
+
+      if (_currentIntro != null &&
+          currentPosition >= _currentIntro!.start &&
+          currentPosition < _currentIntro!.end) {
+        shouldShowIntro = true;
+      }
+
+      if (_currentOutro != null &&
+          currentPosition >= _currentOutro!.start &&
+          currentPosition < _currentOutro!.end) {
+        shouldShowOutro = true;
+      }
+
+      if (_showSkipIntro != shouldShowIntro ||
+          _showSkipOutro != shouldShowOutro) {
+        setState(() {
+          _showSkipIntro = shouldShowIntro;
+          _showSkipOutro = shouldShowOutro;
+        });
+        _fullscreenOverlay?.markNeedsBuild();
+      }
+    });
+  }
+
+  Future<void> _handleSkipIntro() async {
+    if (_currentIntro == null || _betterPlayerController == null) return;
+    try {
+      await _betterPlayerController!.seekTo(
+        Duration(seconds: _currentIntro!.end),
+      );
+      setState(() => _showSkipIntro = false);
+      _fullscreenOverlay?.markNeedsBuild();
+    } catch (e, st) {
+      debugPrint('[SourcesPage._handleSkipIntro] error: $e');
+      debugPrintStack(stackTrace: st);
+    }
+  }
+
+  Future<void> _handleSkipOutro() async {
+    if (_currentOutro == null || _betterPlayerController == null) return;
+    try {
+      await _betterPlayerController!.seekTo(
+        Duration(seconds: _currentOutro!.end),
+      );
+      setState(() => _showSkipOutro = false);
+      _fullscreenOverlay?.markNeedsBuild();
+    } catch (e, st) {
+      debugPrint('[SourcesPage._handleSkipOutro] error: $e');
+      debugPrintStack(stackTrace: st);
+    }
+  }
+
+  void _insertFullScreenOverlay() {
+    try {
+      if (_fullscreenOverlay != null) return;
+
+      _fullscreenOverlay = OverlayEntry(
+        builder: (ctx) {
+          return Material(
+            color: Colors.transparent,
+            child: Positioned.fill(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onDoubleTap: () {
+                              _handleDoubleTapSeek(false);
+                              _fullscreenOverlay?.markNeedsBuild();
+                            },
+                            onTap: () {
+                              _betterPlayerController?.toggleControlsVisibility(
+                                true,
+                              );
+                            },
+                            child: Container(color: Colors.transparent),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onDoubleTap: () {
+                              _handleDoubleTapSeek(true);
+                              _fullscreenOverlay?.markNeedsBuild();
+                            },
+                            onTap: () {
+                              _betterPlayerController?.toggleControlsVisibility(
+                                true,
+                              );
+                            },
+                            child: Container(color: Colors.transparent),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  if (_showSeekOverlay)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Center(
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              _seekOverlayText,
+                              style: TextStyle(
+                                color: AppTheme.whiteGradient,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  if (_showSkipIntro)
+                    Positioned(
+                      bottom: 80,
+                      right: 16,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.gradient1,
+                          foregroundColor: AppTheme.whiteGradient,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () {
+                          _handleSkipIntro();
+                          _fullscreenOverlay?.markNeedsBuild();
+                        },
+                        icon: Icon(Icons.fast_forward, size: 18),
+                        label: Text(
+                          'Skip Intro',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  if (_showSkipOutro)
+                    Positioned(
+                      bottom: 80,
+                      right: 16,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.gradient1,
+                          foregroundColor: AppTheme.whiteGradient,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () {
+                          _handleSkipOutro();
+                          _fullscreenOverlay?.markNeedsBuild();
+                        },
+                        icon: Icon(Icons.fast_forward, size: 18),
+                        label: Text(
+                          'Skip Outro',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _fullscreenOverlay == null) return;
+        final rootOverlay = Navigator.of(context, rootNavigator: true).overlay;
+        rootOverlay?.insert(_fullscreenOverlay!);
+      });
+    } catch (e, st) {
+      debugPrint('[SourcesPage._insertFullscreenOverlay] $e');
+      debugPrintStack(stackTrace: st);
+    }
+  }
+
+  void _removeFullScreenOverlay() {
+    try {
+      _fullscreenOverlay?.remove();
+      _fullscreenOverlay = null;
+    } catch (e, st) {
+      debugPrint('[SourcesPage._removeFullScreenOverlay] $e');
       debugPrintStack(stackTrace: st);
     }
   }
@@ -401,6 +647,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
           aspectRatio: 16 / 9,
           handleLifecycle: false,
           autoDispose: false,
+          allowedScreenSleep: false,
 
           controlsConfiguration: BetterPlayerControlsConfiguration(
             playerTheme: BetterPlayerTheme.cupertino,
@@ -413,6 +660,8 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
             enableMute: true,
             enableSubtitles: true,
             enableRetry: true,
+            enableOverflowMenu: true,
+            enablePip: true,
 
             progressBarPlayedColor: AppTheme.gradient1,
             progressBarHandleColor: AppTheme.gradient1,
@@ -468,7 +717,24 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                     _isLoadingNewEpisode = false;
                   });
                   _enableWakelock();
+                  final vidSrcState = ref.read(
+                    vidSrcSourcesProvider(_stableCacheKey),
+                  );
+                  if (vidSrcState.hasValue && vidSrcState.value != null) {
+                    _startSkipOverlayTimer(
+                      vidSrcState.value!.intro,
+                      vidSrcState.value!.outro,
+                    );
+                  }
                 }
+                break;
+
+              case BetterPlayerEventType.openFullscreen:
+                if (mounted) _insertFullScreenOverlay();
+                break;
+
+              case BetterPlayerEventType.hideFullscreen:
+                if (mounted) _removeFullScreenOverlay();
                 break;
 
               case BetterPlayerEventType.play:
@@ -483,6 +749,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
 
               case BetterPlayerEventType.finished:
                 _disableWakelock();
+                _cancelSkipOverlay();
                 _playNextEpisode();
                 break;
 
@@ -495,6 +762,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                     _isLoadingNewEpisode = false;
                   });
                   _disableWakelock();
+                  _cancelSkipOverlay();
                   _tryNextServerOnError();
                 }
                 break;
@@ -661,10 +929,12 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         _betterPlayerController = null;
       }
     }
+    _removeFullScreenOverlay();
     _disableWakelock();
     _videoURL = null;
     _cancelInitializationTimer();
     _cancelSeekOverlay();
+    _cancelSkipOverlay();
   }
 
   void _cancelSeekOverlay() {
@@ -672,6 +942,16 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     _seekOverlayTimer = null;
     if (_showSeekOverlay) {
       _showSeekOverlay = false;
+      if (mounted) setState(() {});
+    }
+  }
+
+  void _cancelSkipOverlay() {
+    _skipOverlayTimer?.cancel();
+    _skipOverlayTimer = null;
+    if (_showSkipIntro || _showSkipOutro) {
+      _showSkipIntro = false;
+      _showSkipOutro = false;
       if (mounted) setState(() {});
     }
   }
@@ -697,7 +977,9 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         try {
           await videoController?.seekTo(target);
         } catch (e2, st2) {
-          debugPrint('[SourcesPage._handleDoubleTapSeek] fallback seek error: $e2');
+          debugPrint(
+            '[SourcesPage._handleDoubleTapSeek] fallback seek error: $e2',
+          );
           debugPrintStack(stackTrace: st2);
         }
       }
@@ -707,11 +989,13 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
           : '-${_seekDuration.inSeconds}s');
       _showSeekOverlay = true;
       if (mounted) setState(() {});
+      _fullscreenOverlay?.markNeedsBuild();
 
       _seekOverlayTimer?.cancel();
       _seekOverlayTimer = Timer(Duration(milliseconds: 900), () {
         _showSeekOverlay = false;
         if (mounted) setState(() {});
+        _fullscreenOverlay?.markNeedsBuild();
       });
     } catch (e, st) {
       debugPrint('[SourcesPage._handleDoubleTapSeek] unexpected error: $e');
@@ -776,15 +1060,18 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              margin: EdgeInsets.only(top: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppTheme.greyGradient,
-                borderRadius: BorderRadius.circular(2),
+            Center(
+              child: Container(
+                margin: EdgeInsets.only(top: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.greyGradient,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             Padding(
@@ -844,10 +1131,13 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     );
   }
 
-Widget _buildVideoPlayer() {
+  Widget _buildVideoPlayer() {
+    final size = MediaQuery.sizeOf(context);
     return Container(
-      width: double.infinity,
-      height: 250,
+      width: Platform.isAndroid || Platform.isIOS
+          ? double.infinity
+          : size.width * 0.5,
+      height: Platform.isAndroid || Platform.isIOS ? 250 : size.height * 0.5,
       decoration: BoxDecoration(
         color: AppTheme.primaryBlack,
         borderRadius: BorderRadius.circular(12),
@@ -861,58 +1151,171 @@ Widget _buildVideoPlayer() {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: _betterPlayerController != null && _videoReady && !_isDisposing
-            ? Stack(
-                fit: StackFit.passthrough,
-                children: [
-                  BetterPlayer(controller: _betterPlayerController!),
+        child: (_videoReady && !_isDisposing)
+            ? (Platform.isAndroid || Platform.isIOS)
+                  ? (_betterPlayerController != null
+                        ? Stack(
+                            fit: StackFit.passthrough,
+                            children: [
+                              BetterPlayer(
+                                controller: _betterPlayerController!,
+                              ),
 
-                  Positioned.fill(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.translucent,
-                            onDoubleTap: () => _handleDoubleTapSeek(false),
-                          ),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.translucent,
-                            onDoubleTap: () => _handleDoubleTapSeek(true),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                              Positioned.fill(
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: GestureDetector(
+                                        behavior: HitTestBehavior.translucent,
+                                        onDoubleTap: () =>
+                                            _handleDoubleTapSeek(false),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: GestureDetector(
+                                        behavior: HitTestBehavior.translucent,
+                                        onDoubleTap: () =>
+                                            _handleDoubleTapSeek(true),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
 
-                  if (_showSeekOverlay)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: Center(
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black54,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _seekOverlayText,
-                              style: TextStyle(
-                                color: AppTheme.whiteGradient,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                              if (_showSeekOverlay)
+                                Positioned.fill(
+                                  child: IgnorePointer(
+                                    child: Center(
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black54,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          _seekOverlayText,
+                                          style: TextStyle(
+                                            color: AppTheme.whiteGradient,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                              if (_showSkipIntro)
+                                Positioned(
+                                  bottom: 80,
+                                  right: 16,
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.gradient1,
+                                      foregroundColor: AppTheme.whiteGradient,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    onPressed: _handleSkipIntro,
+                                    icon: Icon(Icons.fast_forward, size: 18),
+                                    label: Text(
+                                      'Skip Intro',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                              if (_showSkipOutro)
+                                Positioned(
+                                  bottom: 80,
+                                  right: 16,
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.gradient1,
+                                      foregroundColor: AppTheme.whiteGradient,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    onPressed: _handleSkipOutro,
+                                    icon: Icon(Icons.fast_forward, size: 18),
+                                    label: Text(
+                                      'Skip Outro',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          )
+                        : Container(
+                            color: AppTheme.primaryBlack,
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  CircularProgressIndicator(
+                                    color: AppTheme.gradient1,
+                                  ),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'Initializing player...',
+                                    style: TextStyle(
+                                      color: AppTheme.whiteGradient,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  if (_currentServer != null) ...[
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'Server: ${_currentServer!.serverName} (${_currentServer!.type})',
+                                      style: TextStyle(
+                                        color: AppTheme.whiteGradient
+                                            .withValues(alpha: 0.7),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              )
+                          ))
+                  : LinuxVideoPlayer(
+                      videoUrl: _videoURL ?? '',
+                      captions: _availableSubtitles, // Pass captions directly
+                      autoPlay: true,
+                      aspectRatio: 16 / 9,
+                      onFinished: _playNextEpisode,
+                      onError: (err) {
+                        if (mounted) {
+                          setState(() {
+                            _hasError = true;
+                            _errorMessage =
+                                'Video playback error (desktop): $err';
+                            _isLoadingNewEpisode = false;
+                          });
+                        }
+                      },
+                    )
             : Container(
                 color: AppTheme.primaryBlack,
                 child: Center(
@@ -951,7 +1354,11 @@ Widget _buildVideoPlayer() {
   }
 
   Widget _buildServersList() {
+    final size = MediaQuery.sizeOf(context);
     return Container(
+      width: Platform.isAndroid || Platform.isIOS
+          ? double.infinity
+          : size.width * 0.5,
       margin: EdgeInsets.symmetric(horizontal: 15),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -970,493 +1377,557 @@ Widget _buildVideoPlayer() {
                   ),
                 ),
                 if (_videoReady)
-                  IconButton(
-                    icon: Icon(Icons.download, color: AppTheme.gradient1),
-                    onPressed: () async {
-                      final vidState = ref.read(
-                        vidSrcSourcesProvider(_stableCacheKey),
-                      );
-                      if (!vidState.hasValue || vidState.value == null) {
-                        Toast(
-                          context: context,
-                          title: 'No stream',
-                          description: 'Final stream not ready yet',
-                          type: ToastificationType.error,
-                        );
-                        return;
-                      }
-
-                      final megaCloudServers = _availableServers
-                          .where((s) => s.serverName == 'MegaCloud')
-                          .toList();
-
-                      if (megaCloudServers.isEmpty) {
-                        Toast(
-                          context: context,
-                          title: 'No MegaCloud servers',
-                          description: 'No downloadable servers available',
-                          type: ToastificationType.error,
-                        );
-                        return;
-                      }
-
-                      final selectedServer = await showModalBottomSheet<Server>(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: AppTheme.blackGradient,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(16),
-                          ),
-                        ),
-                        builder: (ctx) {
-                          return SafeArea(
-                            child: Container(
-                              width: double.infinity,
-                              padding: EdgeInsets.only(
-                                top: 12,
-                                left: 12,
-                                right: 12,
-                                bottom: 18,
+                  if (Platform.isLinux || Platform.isWindows)
+                    Container(
+                      width: 150,
+                      padding: EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.gradient1),
+                      ),
+                      child: Wrap(
+                        children: [
+                          Row(
+                            spacing: 5,
+                            children: [
+                              Icon(
+                                Icons.info,
+                                color: AppTheme.primaryAmber,
+                                size: 15,
                               ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 40,
-                                    height: 4,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.greyGradient,
-                                      borderRadius: BorderRadius.circular(2),
+                              Text(
+                                'NOTE',
+                                style: TextStyle(
+                                  color: AppTheme.primaryAmber,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            'Download feature is not supported on Linux / Windows platforms.',
+                            style: TextStyle(
+                              color: AppTheme.whiteGradient,
+                              fontSize: 12,
+                            ),
+                            softWrap: true,
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    IconButton(
+                      icon: Icon(Icons.download, color: AppTheme.gradient1),
+                      onPressed: () async {
+                        final vidState = ref.read(
+                          vidSrcSourcesProvider(_stableCacheKey),
+                        );
+                        if (!vidState.hasValue || vidState.value == null) {
+                          Toast(
+                            context: context,
+                            title: 'No stream',
+                            description: 'Final stream not ready yet',
+                            type: ToastificationType.error,
+                          );
+                          return;
+                        }
+
+                        final megaCloudServers = _availableServers
+                            .where((s) => s.serverName == 'MegaCloud')
+                            .toList();
+
+                        if (megaCloudServers.isEmpty) {
+                          Toast(
+                            context: context,
+                            title: 'No MegaCloud servers',
+                            description: 'No downloadable servers available',
+                            type: ToastificationType.error,
+                          );
+                          return;
+                        }
+
+                        final selectedServer =
+                            await showModalBottomSheet<Server>(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: AppTheme.blackGradient,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(16),
+                                ),
+                              ),
+                              builder: (ctx) {
+                                return SafeArea(
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: EdgeInsets.only(
+                                      top: 12,
+                                      left: 12,
+                                      right: 12,
+                                      bottom: 18,
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 4,
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.greyGradient,
+                                            borderRadius: BorderRadius.circular(
+                                              2,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(height: 12),
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            'Choose from a server',
+                                            style: TextStyle(
+                                              color: AppTheme.gradient1,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(height: 12),
+                                        Row(
+                                          children: megaCloudServers.map((s) {
+                                            return Expanded(
+                                              child: Padding(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 6,
+                                                ),
+                                                child: ElevatedButton(
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            AppTheme
+                                                                .primaryBlack,
+                                                        side: BorderSide(
+                                                          color: AppTheme
+                                                              .gradient1,
+                                                        ),
+                                                        padding:
+                                                            EdgeInsets.symmetric(
+                                                              vertical: 12,
+                                                            ),
+                                                      ),
+                                                  onPressed: () =>
+                                                      Navigator.of(ctx).pop(s),
+                                                  child: Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Text(
+                                                        s.type.toUpperCase(),
+                                                        style: TextStyle(
+                                                          color: AppTheme
+                                                              .gradient1,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      SizedBox(height: 4),
+                                                      Text(
+                                                        s.serverName,
+                                                        style: TextStyle(
+                                                          color: AppTheme
+                                                              .whiteGradient
+                                                              .withValues(
+                                                                alpha: 0.7,
+                                                              ),
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
+                                        SizedBox(height: 12),
+                                      ],
                                     ),
                                   ),
-                                  SizedBox(height: 12),
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      'Choose from a server',
+                                );
+                              },
+                            );
+
+                        if (selectedServer == null) return;
+
+                        showModalBottomSheet<void>(
+                          // ignore: use_build_context_synchronously
+                          context: context,
+                          isDismissible: false,
+                          backgroundColor: AppTheme.blackGradient,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
+                          ),
+                          builder: (ctx) {
+                            return SafeArea(
+                              child: Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.symmetric(vertical: 24),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircularProgressIndicator(
+                                      color: AppTheme.gradient1,
+                                    ),
+                                    SizedBox(height: 12),
+                                    Text(
+                                      'Loading qualities...',
                                       style: TextStyle(
-                                        color: AppTheme.gradient1,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                                        color: AppTheme.whiteGradient,
                                       ),
                                     ),
-                                  ),
-                                  SizedBox(height: 12),
-                                  Row(
-                                    children: megaCloudServers.map((s) {
-                                      return Expanded(
-                                        child: Padding(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                          ),
-                                          child: ElevatedButton(
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  AppTheme.primaryBlack,
-                                              side: BorderSide(
-                                                color: AppTheme.gradient1,
-                                              ),
-                                              padding: EdgeInsets.symmetric(
-                                                vertical: 12,
-                                              ),
-                                            ),
-                                            onPressed: () =>
-                                                Navigator.of(ctx).pop(s),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(
-                                                  s.type.toUpperCase(),
-                                                  style: TextStyle(
-                                                    color: AppTheme.gradient1,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                SizedBox(height: 4),
-                                                Text(
-                                                  s.serverName,
-                                                  style: TextStyle(
-                                                    color: AppTheme
-                                                        .whiteGradient
-                                                        .withValues(alpha: 0.7),
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                                  SizedBox(height: 12),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                      );
-
-                      if (selectedServer == null) return;
-
-                      showModalBottomSheet<void>(
-                        // ignore: use_build_context_synchronously
-                        context: context,
-                        isDismissible: false,
-                        backgroundColor: AppTheme.blackGradient,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(16),
-                          ),
-                        ),
-                        builder: (ctx) {
-                          return SafeArea(
-                            child: Container(
-                              width: double.infinity,
-                              padding: EdgeInsets.symmetric(vertical: 24),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  CircularProgressIndicator(
-                                    color: AppTheme.gradient1,
-                                  ),
-                                  SizedBox(height: 12),
-                                  Text(
-                                    'Loading qualities...',
-                                    style: TextStyle(
-                                      color: AppTheme.whiteGradient,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      );
-
-                      final sourcesRepo = ref.read(sourcesRepositoryProvider);
-                      List<SourceFile> qualitySources = [];
-                      List<HlsVariant> hlsVariants = [];
-                      bool isHlsMaster = false;
-
-                      try {
-                        final sourcesObj = await sourcesRepo.getSources(
-                          selectedServer.dataID,
-                        );
-                        final vidSrc = await sourcesRepo.getVidSrcSources(
-                          sourcesObj.dataID,
-                          sourcesObj.key,
+                            );
+                          },
                         );
 
-                        if (vidSrc.sources.isNotEmpty) {
-                          final master = vidSrc.sources.firstWhere(
-                            (s) =>
-                                s.fileURL.toLowerCase().contains('.m3u8') ||
-                                s.type.toLowerCase().contains('hls'),
-                            orElse: () => vidSrc.sources.first,
+                        final sourcesRepo = ref.read(sourcesRepositoryProvider);
+                        List<SourceFile> qualitySources = [];
+                        List<HlsVariant> hlsVariants = [];
+                        bool isHlsMaster = false;
+
+                        try {
+                          final sourcesObj = await sourcesRepo.getSources(
+                            selectedServer.dataID,
+                          );
+                          final vidSrc = await sourcesRepo.getVidSrcSources(
+                            sourcesObj.dataID,
+                            sourcesObj.key,
                           );
 
-                          if (master.fileURL.toLowerCase().contains('.m3u8') ||
-                              master.type.toLowerCase().contains('hls')) {
-                            isHlsMaster = true;
-                            try {
-                              hlsVariants = await DownloadsRepository()
-                                  .listHlsVariants(master.fileURL);
-                            } catch (e, st) {
-                              debugPrint('[SourcesPage.downloads] listHlsVariants error: $e');
-                              debugPrintStack(stackTrace: st);
-                              hlsVariants = [];
+                          if (vidSrc.sources.isNotEmpty) {
+                            final master = vidSrc.sources.firstWhere(
+                              (s) =>
+                                  s.fileURL.toLowerCase().contains('.m3u8') ||
+                                  s.type.toLowerCase().contains('hls'),
+                              orElse: () => vidSrc.sources.first,
+                            );
+
+                            if (master.fileURL.toLowerCase().contains(
+                                  '.m3u8',
+                                ) ||
+                                master.type.toLowerCase().contains('hls')) {
+                              isHlsMaster = true;
+                              try {
+                                hlsVariants = await DownloadsRepository()
+                                    .listHlsVariants(master.fileURL);
+                              } catch (e, st) {
+                                debugPrint(
+                                  '[SourcesPage.downloads] listHlsVariants error: $e',
+                                );
+                                debugPrintStack(stackTrace: st);
+                                hlsVariants = [];
+                              }
+                            } else {
+                              qualitySources = vidSrc.sources.toList();
+                              qualitySources.sort(
+                                (a, b) => _qualityScore(
+                                  a,
+                                ).compareTo(_qualityScore(b)),
+                              );
                             }
                           } else {
-                            qualitySources = vidSrc.sources.toList();
-                            qualitySources.sort(
-                              (a, b) =>
-                                  _qualityScore(a).compareTo(_qualityScore(b)),
+                            debugPrint(
+                              '[SourcesPage.downloads] vidSrc.sources is empty for server ${selectedServer.dataID}',
                             );
                           }
-                        } else {
-                          debugPrint('[SourcesPage.downloads] vidSrc.sources is empty for server ${selectedServer.dataID}');
+                        } catch (e, st) {
+                          debugPrint(
+                            '[SourcesPage.downloads] error fetching sources for server ${selectedServer.dataID}: $e',
+                          );
+                          debugPrintStack(stackTrace: st);
+                        } finally {
+                          // ignore: use_build_context_synchronously
+                          Navigator.pop(context);
                         }
-                      } catch (e, st) {
-                        debugPrint('[SourcesPage.downloads] error fetching sources for server ${selectedServer.dataID}: $e');
-                        debugPrintStack(stackTrace: st);
-                      } finally {
-                        // ignore: use_build_context_synchronously
-                        Navigator.pop(context);
-                      }
 
-                      if (isHlsMaster) {
-                        final selectedVariant =
-                            await showModalBottomSheet<HlsVariant>(
-                              // ignore: use_build_context_synchronously
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: AppTheme.blackGradient,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(16),
+                        if (isHlsMaster) {
+                          final selectedVariant =
+                              await showModalBottomSheet<HlsVariant>(
+                                // ignore: use_build_context_synchronously
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: AppTheme.blackGradient,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16),
+                                  ),
                                 ),
-                              ),
-                              builder: (ctx) {
-                                final maxHeight =
-                                    MediaQuery.of(ctx).size.height * 0.6;
-                                return SafeArea(
-                                  child: Container(
-                                    width: double.infinity,
-                                    constraints: BoxConstraints(
-                                      maxHeight: maxHeight,
-                                    ),
-                                    padding: EdgeInsets.only(
-                                      top: 12,
-                                      left: 12,
-                                      right: 12,
-                                      bottom: 12,
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        Container(
-                                          width: 40,
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.greyGradient,
-                                            borderRadius: BorderRadius.circular(
-                                              2,
+                                builder: (ctx) {
+                                  final maxHeight =
+                                      MediaQuery.of(ctx).size.height * 0.6;
+                                  return SafeArea(
+                                    child: Container(
+                                      width: double.infinity,
+                                      constraints: BoxConstraints(
+                                        maxHeight: maxHeight,
+                                      ),
+                                      padding: EdgeInsets.only(
+                                        top: 12,
+                                        left: 12,
+                                        right: 12,
+                                        bottom: 12,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 4,
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.greyGradient,
+                                              borderRadius:
+                                                  BorderRadius.circular(2),
                                             ),
                                           ),
-                                        ),
-                                        SizedBox(height: 12),
-                                        Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: Text(
-                                            'Select Quality',
-                                            style: TextStyle(
-                                              color: AppTheme.gradient1,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
+                                          SizedBox(height: 12),
+                                          Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: Text(
+                                              'Select Quality',
+                                              style: TextStyle(
+                                                color: AppTheme.gradient1,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        SizedBox(height: 8),
-                                        Expanded(
-                                          child: hlsVariants.isEmpty
-                                              ? _emptyFormatsWidget(ctx)
-                                              : ListView.separated(
-                                                  itemCount: hlsVariants.length,
-                                                  separatorBuilder: (_, __) =>
-                                                      Divider(
-                                                        color: AppTheme
-                                                            .gradient1
-                                                            .withValues(
-                                                              alpha: 0.12,
-                                                            ),
-                                                      ),
-                                                  itemBuilder: (ctx2, i) {
-                                                    final v = hlsVariants[i];
-                                                    final title =
-                                                        v.resolution ??
-                                                        (v.bandwidth != null
-                                                            ? '${(v.bandwidth! / 1000).toStringAsFixed(0)} kbps'
-                                                            : 'Variant ${i + 1}');
-                                                    return ListTile(
-                                                      title: Text(
-                                                        title,
-                                                        style: TextStyle(
+                                          SizedBox(height: 8),
+                                          Expanded(
+                                            child: hlsVariants.isEmpty
+                                                ? _emptyFormatsWidget(ctx)
+                                                : ListView.separated(
+                                                    itemCount:
+                                                        hlsVariants.length,
+                                                    separatorBuilder: (_, __) =>
+                                                        Divider(
                                                           color: AppTheme
-                                                              .whiteGradient,
-                                                        ),
-                                                      ),
-                                                      subtitle: Text(
-                                                        'HLS media',
-                                                        style: TextStyle(
-                                                          color: AppTheme
-                                                              .whiteGradient
+                                                              .gradient1
                                                               .withValues(
-                                                                alpha: 0.6,
+                                                                alpha: 0.12,
                                                               ),
                                                         ),
-                                                      ),
-                                                      onTap: () => Navigator.of(
-                                                        ctx,
-                                                      ).pop(v),
-                                                    );
-                                                  },
-                                                ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                        if (selectedVariant == null) return;
-
-                        ref
-                            .read(downloadsProvider.notifier)
-                            .startDownload(
-                              animeSlug: widget.anime.slug,
-                              animeTitle: widget.anime.title,
-                              episodeId:
-                                  _currentPlayingEpisode?.episodeID ?? '',
-                              episodeNumber:
-                                  _currentPlayingEpisode?.episodeNumber ?? '',
-                              title:
-                                  _currentPlayingEpisode?.title ??
-                                  widget.anime.title,
-                              serverId: selectedServer.dataID,
-                              url: selectedVariant.uri,
-                              posterUrl: widget.anime.image,
-                              captions: vidState.value!.captions,
-                            );
-                      } else {
-                        final selectedSource =
-                            await showModalBottomSheet<SourceFile>(
-                              // ignore: use_build_context_synchronously
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: AppTheme.blackGradient,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(16),
-                                ),
-                              ),
-                              builder: (ctx) {
-                                final maxHeight =
-                                    MediaQuery.of(ctx).size.height * 0.6;
-                                return SafeArea(
-                                  child: Container(
-                                    width: double.infinity,
-                                    constraints: BoxConstraints(
-                                      maxHeight: maxHeight,
-                                    ),
-                                    padding: EdgeInsets.only(
-                                      top: 12,
-                                      left: 12,
-                                      right: 12,
-                                      bottom: 12,
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        Container(
-                                          width: 40,
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.greyGradient,
-                                            borderRadius: BorderRadius.circular(
-                                              2,
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(height: 12),
-                                        Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: Text(
-                                            'Select Quality',
-                                            style: TextStyle(
-                                              color: AppTheme.gradient1,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(height: 8),
-                                        Expanded(
-                                          child: qualitySources.isEmpty
-                                              ? _emptyFormatsWidget(ctx)
-                                              : ListView.separated(
-                                                  itemCount:
-                                                      qualitySources.length,
-                                                  separatorBuilder: (_, __) =>
-                                                      Divider(
-                                                        color: AppTheme
-                                                            .gradient1
-                                                            .withValues(
-                                                              alpha: 0.12,
-                                                            ),
-                                                      ),
-                                                  itemBuilder: (ctx2, i) {
-                                                    final s = qualitySources[i];
-                                                    final label =
-                                                        s.type.isNotEmpty
-                                                        ? s.type
-                                                        : s.fileURL
-                                                              .split('/')
-                                                              .last;
-                                                    final subtitle =
-                                                        s.fileURL.contains(
-                                                          '.m3u8',
-                                                        )
-                                                        ? 'HLS media'
-                                                        : s.fileURL;
-                                                    return ListTile(
-                                                      title: Text(
-                                                        label,
-                                                        style: TextStyle(
-                                                          color: AppTheme
-                                                              .whiteGradient,
+                                                    itemBuilder: (ctx2, i) {
+                                                      final v = hlsVariants[i];
+                                                      final title =
+                                                          v.resolution ??
+                                                          (v.bandwidth != null
+                                                              ? '${(v.bandwidth! / 1000).toStringAsFixed(0)} kbps'
+                                                              : 'Variant ${i + 1}');
+                                                      return ListTile(
+                                                        title: Text(
+                                                          title,
+                                                          style: TextStyle(
+                                                            color: AppTheme
+                                                                .whiteGradient,
+                                                          ),
                                                         ),
-                                                      ),
-                                                      subtitle: Text(
-                                                        subtitle,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: TextStyle(
+                                                        subtitle: Text(
+                                                          'HLS media',
+                                                          style: TextStyle(
+                                                            color: AppTheme
+                                                                .whiteGradient
+                                                                .withValues(
+                                                                  alpha: 0.6,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                        onTap: () =>
+                                                            Navigator.of(
+                                                              ctx,
+                                                            ).pop(v),
+                                                      );
+                                                    },
+                                                  ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                          if (selectedVariant == null) return;
+
+                          ref
+                              .read(downloadsProvider.notifier)
+                              .startDownload(
+                                animeSlug: widget.anime.slug,
+                                animeTitle: widget.anime.title,
+                                episodeId:
+                                    _currentPlayingEpisode?.episodeID ?? '',
+                                episodeNumber:
+                                    _currentPlayingEpisode?.episodeNumber ?? '',
+                                title:
+                                    _currentPlayingEpisode?.title ??
+                                    widget.anime.title,
+                                serverId: selectedServer.dataID,
+                                url: selectedVariant.uri,
+                                posterUrl: widget.anime.image,
+                                captions: vidState.value!.captions,
+                              );
+                        } else {
+                          final selectedSource =
+                              await showModalBottomSheet<SourceFile>(
+                                // ignore: use_build_context_synchronously
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: AppTheme.blackGradient,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16),
+                                  ),
+                                ),
+                                builder: (ctx) {
+                                  final maxHeight =
+                                      MediaQuery.of(ctx).size.height * 0.6;
+                                  return SafeArea(
+                                    child: Container(
+                                      width: double.infinity,
+                                      constraints: BoxConstraints(
+                                        maxHeight: maxHeight,
+                                      ),
+                                      padding: EdgeInsets.only(
+                                        top: 12,
+                                        left: 12,
+                                        right: 12,
+                                        bottom: 12,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 4,
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.greyGradient,
+                                              borderRadius:
+                                                  BorderRadius.circular(2),
+                                            ),
+                                          ),
+                                          SizedBox(height: 12),
+                                          Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: Text(
+                                              'Select Quality',
+                                              style: TextStyle(
+                                                color: AppTheme.gradient1,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(height: 8),
+                                          Expanded(
+                                            child: qualitySources.isEmpty
+                                                ? _emptyFormatsWidget(ctx)
+                                                : ListView.separated(
+                                                    itemCount:
+                                                        qualitySources.length,
+                                                    separatorBuilder: (_, __) =>
+                                                        Divider(
                                                           color: AppTheme
-                                                              .whiteGradient
+                                                              .gradient1
                                                               .withValues(
-                                                                alpha: 0.6,
+                                                                alpha: 0.12,
                                                               ),
                                                         ),
-                                                      ),
-                                                      onTap: () => Navigator.of(
-                                                        ctx,
-                                                      ).pop(s),
-                                                    );
-                                                  },
-                                                ),
-                                        ),
-                                      ],
+                                                    itemBuilder: (ctx2, i) {
+                                                      final s =
+                                                          qualitySources[i];
+                                                      final label =
+                                                          s.type.isNotEmpty
+                                                          ? s.type
+                                                          : s.fileURL
+                                                                .split('/')
+                                                                .last;
+                                                      final subtitle =
+                                                          s.fileURL.contains(
+                                                            '.m3u8',
+                                                          )
+                                                          ? 'HLS media'
+                                                          : s.fileURL;
+                                                      return ListTile(
+                                                        title: Text(
+                                                          label,
+                                                          style: TextStyle(
+                                                            color: AppTheme
+                                                                .whiteGradient,
+                                                          ),
+                                                        ),
+                                                        subtitle: Text(
+                                                          subtitle,
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style: TextStyle(
+                                                            color: AppTheme
+                                                                .whiteGradient
+                                                                .withValues(
+                                                                  alpha: 0.6,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                        onTap: () =>
+                                                            Navigator.of(
+                                                              ctx,
+                                                            ).pop(s),
+                                                      );
+                                                    },
+                                                  ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
-                            );
+                                  );
+                                },
+                              );
 
-                        if (selectedSource == null) return;
-                        ref
-                            .read(downloadsProvider.notifier)
-                            .startDownload(
-                              animeSlug: widget.anime.slug,
-                              animeTitle: widget.anime.title,
-                              episodeId:
-                                  _currentPlayingEpisode?.episodeID ?? '',
-                              episodeNumber:
-                                  _currentPlayingEpisode?.episodeNumber ?? '',
-                              title:
-                                  _currentPlayingEpisode?.title ??
-                                  widget.anime.title,
-                              serverId: selectedServer.dataID,
-                              url: selectedSource.fileURL,
-                              posterUrl: widget.anime.image,
-                              captions: vidState.value!.captions,
-                            );
-                      }
-                      Toast(
-                        // ignore: use_build_context_synchronously
-                        context: context,
-                        title: 'Download queued',
-                        description:
-                            'Episode ${_currentPlayingEpisode?.episodeNumber ?? ''} added to downloads',
-                        type: ToastificationType.success,
-                      );
-                    },
-                  ),
+                          if (selectedSource == null) return;
+                          ref
+                              .read(downloadsProvider.notifier)
+                              .startDownload(
+                                animeSlug: widget.anime.slug,
+                                animeTitle: widget.anime.title,
+                                episodeId:
+                                    _currentPlayingEpisode?.episodeID ?? '',
+                                episodeNumber:
+                                    _currentPlayingEpisode?.episodeNumber ?? '',
+                                title:
+                                    _currentPlayingEpisode?.title ??
+                                    widget.anime.title,
+                                serverId: selectedServer.dataID,
+                                url: selectedSource.fileURL,
+                                posterUrl: widget.anime.image,
+                                captions: vidState.value!.captions,
+                              );
+                        }
+                        Toast(
+                          // ignore: use_build_context_synchronously
+                          context: context,
+                          title: 'Download queued',
+                          description:
+                              'Episode ${_currentPlayingEpisode?.episodeNumber ?? ''} added to downloads',
+                          type: ToastificationType.success,
+                        );
+                      },
+                    ),
               ],
             ),
           ),
           SizedBox(
             height: 80,
+            width: 200,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: _availableServers.length,
@@ -1577,7 +2048,9 @@ Widget _buildVideoPlayer() {
 
   Widget _buildEpisodesList() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 15),
+      height: Platform.isAndroid || Platform.isIOS ? 200 : null,
+      width: Platform.isAndroid || Platform.isIOS ? double.infinity : 400,
+      margin: EdgeInsets.fromLTRB(15, 30, 30, 30),
       padding: EdgeInsets.only(top: 10),
       decoration: BoxDecoration(
         border: Border.all(color: AppTheme.gradient1, width: 0.5),
@@ -1597,16 +2070,15 @@ Widget _buildVideoPlayer() {
               ),
             ),
           ),
-          Container(
-            height: 225,
-            padding: EdgeInsets.all(10),
+          Expanded(
             child: GridView.builder(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
+                crossAxisCount: Platform.isAndroid || Platform.isIOS ? 4 : 8,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
                 childAspectRatio: 2,
               ),
+              padding: EdgeInsets.symmetric(horizontal: 10),
               itemCount: widget.episodes.length,
               itemBuilder: (context, index) {
                 final episode = widget.episodes[index];
@@ -1650,7 +2122,7 @@ Widget _buildVideoPlayer() {
     );
   }
 
-Widget _buildLoadingStep(String label, bool isActive, bool isCompleted) {
+  Widget _buildLoadingStep(String label, bool isActive, bool isCompleted) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -1693,7 +2165,7 @@ Widget _buildLoadingStep(String label, bool isActive, bool isCompleted) {
       ],
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
     if (_isDisposing) {
@@ -1890,31 +2362,61 @@ Widget _buildLoadingStep(String label, bool isActive, bool isCompleted) {
                         final newVideoURL = stream.sources.first.fileURL;
                         if (_videoURL != newVideoURL) {
                           _videoURL = newVideoURL;
+                          _availableSubtitles = stream.captions;
+
                           WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (!_isDisposing) {
+                            if (_isDisposing) return;
+                            if (Platform.isAndroid || Platform.isIOS) {
                               _setupBetterPlayer(_videoURL!, stream.captions);
+                              return;
+                            }
+                            if (mounted) {
+                              setState(() {
+                                _videoReady = true;
+                                _hasError = false;
+                                _isLoadingNewEpisode = false;
+                              });
                             }
                           });
                         }
                       }
 
-                      return SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(15),
-                              child: _buildVideoPlayer(),
-                            ),
-                            SizedBox(height: 20),
-                            _buildServersList(),
-                            SizedBox(height: 20),
-                            _buildEpisodesList(),
-                            SizedBox(height: 100),
-                          ],
-                        ),
-                      );
+                      return Platform.isAndroid || Platform.isIOS
+                          ? SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Padding(
+                                    padding: EdgeInsets.all(15),
+                                    child: _buildVideoPlayer(),
+                                  ),
+                                  SizedBox(height: 20),
+                                  _buildServersList(),
+                                  SizedBox(height: 20),
+                                  _buildEpisodesList(),
+                                  SizedBox(height: 100),
+                                ],
+                              ),
+                            )
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Column(
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.all(15),
+                                      child: _buildVideoPlayer(),
+                                    ),
+                                    SizedBox(height: 20),
+                                    Expanded(child: _buildServersList()),
+                                  ],
+                                ),
+                                SizedBox(height: 20),
+                                Expanded(child: _buildEpisodesList()),
+                                SizedBox(height: 100),
+                              ],
+                            );
                     } else if (vidSrcSource.hasError) {
                       return Center(
                         child: Column(
@@ -1992,4 +2494,3 @@ Widget _buildLoadingStep(String label, bool isActive, bool isCompleted) {
     );
   }
 }
-// ...existing code...

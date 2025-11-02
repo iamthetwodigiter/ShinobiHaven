@@ -181,7 +181,7 @@ class _LandingPageState extends State<LandingPage> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.download),
-            label: 'Downlods',
+            label: 'Downloads',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.view_list),
