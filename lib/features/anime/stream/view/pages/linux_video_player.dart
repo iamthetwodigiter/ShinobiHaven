@@ -318,7 +318,9 @@ class _LinuxVideoPlayerState extends State<LinuxVideoPlayer> {
                     setState(() => _selectedSubtitleTrack = SubtitleTrack.no());
                   }
                 } catch (e) {
-                  debugPrint('[LinuxVideoPlayer] Failed to disable subtitle: $e');
+                  debugPrint(
+                    '[LinuxVideoPlayer] Failed to disable subtitle: $e',
+                  );
                 }
                 if (mounted) {
                   // ignore: use_build_context_synchronously
@@ -328,18 +330,25 @@ class _LinuxVideoPlayerState extends State<LinuxVideoPlayer> {
             ),
 
             ...(_availableSubtitleTracks.map((track) {
-              final isSelected = _selectedSubtitleTrack.title == track.title &&
+              final isSelected =
+                  _selectedSubtitleTrack.title == track.title &&
                   _selectedSubtitleTrack != SubtitleTrack.no();
               return ListTile(
                 leading: Icon(
                   isSelected ? Icons.check_circle : Icons.circle_outlined,
-                  color: isSelected ? AppTheme.gradient1 : AppTheme.whiteGradient,
+                  color: isSelected
+                      ? AppTheme.gradient1
+                      : AppTheme.whiteGradient,
                 ),
                 title: Text(
                   track.title ?? track.language ?? 'Unknown',
                   style: TextStyle(
-                    color: isSelected ? AppTheme.gradient1 : AppTheme.whiteGradient,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected
+                        ? AppTheme.gradient1
+                        : AppTheme.whiteGradient,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
                 onTap: () async {
@@ -445,9 +454,9 @@ class _LinuxVideoPlayerState extends State<LinuxVideoPlayer> {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.black.withValues(alpha: 0.7),
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.7),
+                            AppTheme.primaryBlack.withValues(alpha: 0.7),
+                            AppTheme.transparentColor,
+                            AppTheme.primaryBlack.withValues(alpha: 0.7),
                           ],
                         ),
                       ),
@@ -512,25 +521,29 @@ class _LinuxVideoPlayerState extends State<LinuxVideoPlayer> {
                                   child: Slider(
                                     value: _totalDuration.inMilliseconds > 0
                                         ? _currentPosition.inMilliseconds
-                                            .clamp(
-                                              0,
-                                              _totalDuration.inMilliseconds,
-                                            )
-                                            .toDouble()
+                                              .clamp(
+                                                0,
+                                                _totalDuration.inMilliseconds,
+                                              )
+                                              .toDouble()
                                         : 0,
                                     max: _totalDuration.inMilliseconds > 0
-                                        ? _totalDuration.inMilliseconds.toDouble()
+                                        ? _totalDuration.inMilliseconds
+                                              .toDouble()
                                         : 1,
                                     activeColor: AppTheme.gradient1,
                                     inactiveColor: AppTheme.whiteGradient
                                         .withValues(alpha: 0.3),
                                     onChanged: (value) {
-                                      _seek(Duration(milliseconds: value.toInt()));
+                                      _seek(
+                                        Duration(milliseconds: value.toInt()),
+                                      );
                                     },
                                   ),
                                 ),
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       _formatDuration(_currentPosition),

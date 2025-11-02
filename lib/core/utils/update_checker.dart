@@ -313,7 +313,7 @@ class UpdateChecker {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.error_outline, color: Colors.red),
+            Icon(Icons.error_outline, color: AppTheme.primaryRed),
             SizedBox(width: 8),
             Text('Error'),
           ],
@@ -675,7 +675,7 @@ class UpdateChecker {
                           SizedBox(height: 8),
                           Text(
                             'You can minimize the app. You\'ll get a notification when download completes.',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                            style: TextStyle(fontSize: 12, color: AppTheme.greyGradient),
                             textAlign: TextAlign.center,
                           ),
                         ],

@@ -66,7 +66,7 @@ class _LandingPageState extends State<LandingPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppTheme.transparentColor,
       builder: (context) {
         return Container(
           decoration: BoxDecoration(

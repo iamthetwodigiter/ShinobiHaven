@@ -219,7 +219,7 @@ class _UpdateSettingsSheetState extends ConsumerState<UpdateSettingsSheet> {
                   SizedBox(height: 4),
                   Text(
                     'Recent check failures: ${settings.failureCount}',
-                    style: TextStyle(color: Colors.orange, fontSize: 11),
+                    style: TextStyle(color: AppTheme.primaryOrange, fontSize: 11),
                   ),
                 ],
               ],

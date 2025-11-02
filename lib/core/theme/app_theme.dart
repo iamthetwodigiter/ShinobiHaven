@@ -13,6 +13,7 @@ class AppTheme {
   static const Color primaryBlue = Colors.blue;
   static const Color primaryAmber = Colors.amber;
   static const Color primaryRed = Colors.red;
+  static const Color primaryOrange = Colors.orange;
   static const Color transparentColor = Colors.transparent;
 
   static AppBarTheme get appBarTheme => AppBarTheme(

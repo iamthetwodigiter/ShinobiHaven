@@ -1146,7 +1146,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                                         border: Border.all(
                                           color: AppTheme.gradient1,
                                         ),
-                                        color: Colors.transparent,
+                                        color: AppTheme.transparentColor,
                                       ),
                                       child: Row(
                                         mainAxisAlignment:
@@ -1486,7 +1486,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                                   color: AppTheme.gradient1,
                                   width: 2,
                                 ),
-                                color: Colors.transparent,
+                                color: AppTheme.transparentColor,
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,

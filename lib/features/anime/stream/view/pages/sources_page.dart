@@ -67,7 +67,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
   bool _showSkipOutro = false;
   TimeStamps? _currentIntro;
   TimeStamps? _currentOutro;
-  OverlayEntry? _fullscreenOverlay;
 
   String get _stableCacheKey =>
       '${widget.anime.slug}-${_currentPlayingEpisode?.episodeID ?? ''}';
@@ -129,19 +128,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     super.dispose();
   }
 
-  void _clearAnimeSpecificProviders() {
-    if (_isDisposing || !mounted) return;
-
-    try {
-      ref.invalidate(serversViewModelProvider);
-      ref.invalidate(sourcesViewModelProvider);
-      ref.invalidate(vidSrcSourcesProvider);
-    } catch (e, st) {
-      debugPrint('[SourcesPage._clearAnimeSpecificProviders] error: $e');
-      debugPrintStack(stackTrace: st);
-    }
-  }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_betterPlayerController != null) {
@@ -156,6 +142,19 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         default:
           break;
       }
+    }
+  }
+
+  void _clearAnimeSpecificProviders() {
+    if (_isDisposing || !mounted) return;
+
+    try {
+      ref.invalidate(serversViewModelProvider);
+      ref.invalidate(sourcesViewModelProvider);
+      ref.invalidate(vidSrcSourcesProvider);
+    } catch (e, st) {
+      debugPrint('[SourcesPage._clearAnimeSpecificProviders] error: $e');
+      debugPrintStack(stackTrace: st);
     }
   }
 
@@ -408,7 +407,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
           _showSkipIntro = shouldShowIntro;
           _showSkipOutro = shouldShowOutro;
         });
-        _fullscreenOverlay?.markNeedsBuild();
       }
     });
   }
@@ -420,7 +418,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         Duration(seconds: _currentIntro!.end),
       );
       setState(() => _showSkipIntro = false);
-      _fullscreenOverlay?.markNeedsBuild();
     } catch (e, st) {
       debugPrint('[SourcesPage._handleSkipIntro] error: $e');
       debugPrintStack(stackTrace: st);
@@ -434,173 +431,8 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         Duration(seconds: _currentOutro!.end),
       );
       setState(() => _showSkipOutro = false);
-      _fullscreenOverlay?.markNeedsBuild();
     } catch (e, st) {
       debugPrint('[SourcesPage._handleSkipOutro] error: $e');
-      debugPrintStack(stackTrace: st);
-    }
-  }
-
-  void _insertFullScreenOverlay() {
-    try {
-      if (_fullscreenOverlay != null) return;
-
-      _fullscreenOverlay = OverlayEntry(
-        builder: (ctx) {
-          return Material(
-            color: Colors.transparent,
-            child: Positioned.fill(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.translucent,
-                            onDoubleTap: () {
-                              _handleDoubleTapSeek(false);
-                              _fullscreenOverlay?.markNeedsBuild();
-                            },
-                            onTap: () {
-                              _betterPlayerController?.toggleControlsVisibility(
-                                true,
-                              );
-                            },
-                            child: Container(color: Colors.transparent),
-                          ),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.translucent,
-                            onDoubleTap: () {
-                              _handleDoubleTapSeek(true);
-                              _fullscreenOverlay?.markNeedsBuild();
-                            },
-                            onTap: () {
-                              _betterPlayerController?.toggleControlsVisibility(
-                                true,
-                              );
-                            },
-                            child: Container(color: Colors.transparent),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  if (_showSeekOverlay)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: Center(
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black54,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _seekOverlayText,
-                              style: TextStyle(
-                                color: AppTheme.whiteGradient,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.none,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  if (_showSkipIntro)
-                    Positioned(
-                      bottom: 80,
-                      right: 16,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.gradient1,
-                          foregroundColor: AppTheme.whiteGradient,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: () {
-                          _handleSkipIntro();
-                          _fullscreenOverlay?.markNeedsBuild();
-                        },
-                        icon: Icon(Icons.fast_forward, size: 18),
-                        label: Text(
-                          'Skip Intro',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  if (_showSkipOutro)
-                    Positioned(
-                      bottom: 80,
-                      right: 16,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.gradient1,
-                          foregroundColor: AppTheme.whiteGradient,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: () {
-                          _handleSkipOutro();
-                          _fullscreenOverlay?.markNeedsBuild();
-                        },
-                        icon: Icon(Icons.fast_forward, size: 18),
-                        label: Text(
-                          'Skip Outro',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _fullscreenOverlay == null) return;
-        final rootOverlay = Navigator.of(context, rootNavigator: true).overlay;
-        rootOverlay?.insert(_fullscreenOverlay!);
-      });
-    } catch (e, st) {
-      debugPrint('[SourcesPage._insertFullscreenOverlay] $e');
-      debugPrintStack(stackTrace: st);
-    }
-  }
-
-  void _removeFullScreenOverlay() {
-    try {
-      _fullscreenOverlay?.remove();
-      _fullscreenOverlay = null;
-    } catch (e, st) {
-      debugPrint('[SourcesPage._removeFullScreenOverlay] $e');
       debugPrintStack(stackTrace: st);
     }
   }
@@ -635,6 +467,12 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
           );
         }).toList(),
         videoFormat: BetterPlayerVideoFormat.hls,
+        notificationConfiguration: BetterPlayerNotificationConfiguration(
+          showNotification: true,
+          title: widget.anime.title,
+          author: _currentPlayingEpisode?.title,
+          imageUrl: widget.anime.image,
+        ),
         useAsmsSubtitles: true,
         useAsmsTracks: true,
       );
@@ -660,8 +498,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
             enableMute: true,
             enableSubtitles: true,
             enableRetry: true,
-            enableOverflowMenu: true,
-            enablePip: true,
 
             progressBarPlayedColor: AppTheme.gradient1,
             progressBarHandleColor: AppTheme.gradient1,
@@ -727,14 +563,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                     );
                   }
                 }
-                break;
-
-              case BetterPlayerEventType.openFullscreen:
-                if (mounted) _insertFullScreenOverlay();
-                break;
-
-              case BetterPlayerEventType.hideFullscreen:
-                if (mounted) _removeFullScreenOverlay();
                 break;
 
               case BetterPlayerEventType.play:
@@ -929,7 +757,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         _betterPlayerController = null;
       }
     }
-    _removeFullScreenOverlay();
     _disableWakelock();
     _videoURL = null;
     _cancelInitializationTimer();
@@ -989,13 +816,11 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
           : '-${_seekDuration.inSeconds}s');
       _showSeekOverlay = true;
       if (mounted) setState(() {});
-      _fullscreenOverlay?.markNeedsBuild();
 
       _seekOverlayTimer?.cancel();
       _seekOverlayTimer = Timer(Duration(milliseconds: 900), () {
         _showSeekOverlay = false;
         if (mounted) setState(() {});
-        _fullscreenOverlay?.markNeedsBuild();
       });
     } catch (e, st) {
       debugPrint('[SourcesPage._handleDoubleTapSeek] unexpected error: $e');
@@ -1155,30 +980,24 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
             ? (Platform.isAndroid || Platform.isIOS)
                   ? (_betterPlayerController != null
                         ? Stack(
-                            fit: StackFit.passthrough,
+                            fit: StackFit.expand,
                             children: [
-                              BetterPlayer(
-                                controller: _betterPlayerController!,
-                              ),
+                              GestureDetector(
+                                onDoubleTapDown: (details) {
+                                  final box =
+                                      context.findRenderObject() as RenderBox;
+                                  final localPosition = box.globalToLocal(
+                                    details.globalPosition,
+                                  );
+                                  final boxWidth = box.size.width;
 
-                              Positioned.fill(
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: GestureDetector(
-                                        behavior: HitTestBehavior.translucent,
-                                        onDoubleTap: () =>
-                                            _handleDoubleTapSeek(false),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: GestureDetector(
-                                        behavior: HitTestBehavior.translucent,
-                                        onDoubleTap: () =>
-                                            _handleDoubleTapSeek(true),
-                                      ),
-                                    ),
-                                  ],
+                                  final isLeftSide =
+                                      localPosition.dx < boxWidth / 2.5;
+
+                                  _handleDoubleTapSeek(!isLeftSide);
+                                },
+                                child: BetterPlayer(
+                                  controller: _betterPlayerController!,
                                 ),
                               ),
 
@@ -1188,21 +1007,22 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                                     child: Center(
                                       child: Container(
                                         padding: EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 8,
+                                          horizontal: 24,
+                                          vertical: 12,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.black54,
+                                          color: Colors.black87,
                                           borderRadius: BorderRadius.circular(
-                                            8,
+                                            12,
                                           ),
                                         ),
                                         child: Text(
                                           _seekOverlayText,
                                           style: TextStyle(
-                                            color: AppTheme.whiteGradient,
-                                            fontSize: 18,
+                                            color: Colors.white,
+                                            fontSize: 20,
                                             fontWeight: FontWeight.bold,
+                                            decoration: TextDecoration.none,
                                           ),
                                         ),
                                       ),
@@ -1210,57 +1030,69 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                                   ),
                                 ),
 
+                              // Skip Intro button
                               if (_showSkipIntro)
                                 Positioned(
                                   bottom: 80,
                                   right: 16,
-                                  child: ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.gradient1,
-                                      foregroundColor: AppTheme.whiteGradient,
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.gradient1,
+                                        foregroundColor: Colors.white,
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical: 12,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
                                       ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    onPressed: _handleSkipIntro,
-                                    icon: Icon(Icons.fast_forward, size: 18),
-                                    label: Text(
-                                      'Skip Intro',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
+                                      onPressed: _handleSkipIntro,
+                                      icon: Icon(Icons.fast_forward, size: 20),
+                                      label: Text(
+                                        'Skip Intro',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
 
+                              // Skip Outro button
                               if (_showSkipOutro)
                                 Positioned(
                                   bottom: 80,
                                   right: 16,
-                                  child: ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.gradient1,
-                                      foregroundColor: AppTheme.whiteGradient,
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.gradient1,
+                                        foregroundColor: Colors.white,
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical: 12,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
                                       ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    onPressed: _handleSkipOutro,
-                                    icon: Icon(Icons.fast_forward, size: 18),
-                                    label: Text(
-                                      'Skip Outro',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
+                                      onPressed: _handleSkipOutro,
+                                      icon: Icon(Icons.fast_forward, size: 20),
+                                      label: Text(
+                                        'Skip Outro',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -1301,7 +1133,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                           ))
                   : LinuxVideoPlayer(
                       videoUrl: _videoURL ?? '',
-                      captions: _availableSubtitles, // Pass captions directly
+                      captions: _availableSubtitles,
                       autoPlay: true,
                       aspectRatio: 16 / 9,
                       onFinished: _playNextEpisode,
