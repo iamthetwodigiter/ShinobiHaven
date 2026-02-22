@@ -95,9 +95,6 @@ class _EpisodesPageState extends ConsumerState<EpisodesPage> {
   }
 
   void _playEpisode(Episodes selectedEpisode) {
-    // Add to library when episode is selected
-    LibraryBoxFunction.addToLibrary(widget.anime, selectedEpisode.episodeID);
-
     // Navigate directly to SourcesPage with all episodes
     // Don't pass serverID so it will auto-select the first available server
     Navigator.push(

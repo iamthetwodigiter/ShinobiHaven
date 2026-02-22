@@ -3,7 +3,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 class AppDetails {
-  static const String version = "v1.1.1";
+  static const String version = "v1.1.2";
   static const String developer = "thetwodigiter";
   static const bool isBeta = false;
   static const String repoURL =
@@ -155,10 +155,21 @@ class AppDetails {
 
   static const List<Map<String, dynamic>> changelogs = [
     {
+      "v1.1.2": {
+        "title": "Custom Player & Major Fixes",
+        "date": "2026-02-22",
+        "latest": true,
+        "notes": [
+          "Implemented a custom video player to support seek operations and skip intro/outro",
+          "Added ability to resume video playback from the last watched position",
+          "Fixed a major app exit issue",
+          "Fixed video controller initialization issues",
+        ],
+      },
       "v1.1.1": {
         "title": "Added support for more platforms",
         "date": "2025-11-01",
-        "latest": true,
+        "latest": false,
         "notes": [
           "Added support for Linux platforms",
           "LINUX - Implemented separate video player for desktop platforms",

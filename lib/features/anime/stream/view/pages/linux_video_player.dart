@@ -12,6 +12,8 @@ class LinuxVideoPlayer extends StatefulWidget {
   final List<Captions>? captions;
   final bool autoPlay;
   final double aspectRatio;
+  final Duration startPosition;
+  final Function(Duration position, Duration totalDuration)? onPositionChanged;
   final VoidCallback? onFinished;
   final Function(String)? onError;
 
@@ -21,6 +23,8 @@ class LinuxVideoPlayer extends StatefulWidget {
     this.captions,
     this.autoPlay = true,
     this.aspectRatio = 16 / 9,
+    this.startPosition = Duration.zero,
+    this.onPositionChanged,
     this.onFinished,
     this.onError,
   });
@@ -44,6 +48,7 @@ class _LinuxVideoPlayerState extends State<LinuxVideoPlayer> {
 
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
+  Duration _lastSavedPosition = Duration.zero;
 
   List<VideoTrack> _videoTracks = [];
   List<SubtitleTrack> _availableSubtitleTracks = [];
@@ -70,6 +75,11 @@ class _LinuxVideoPlayerState extends State<LinuxVideoPlayer> {
       _positionSub = _player.stream.position.listen((position) {
         if (mounted) {
           setState(() => _currentPosition = position);
+          if (widget.onPositionChanged != null &&
+              (position.inSeconds - _lastSavedPosition.inSeconds).abs() >= 5) {
+            _lastSavedPosition = position;
+            widget.onPositionChanged!(position, _totalDuration);
+          }
         }
       });
 
@@ -112,6 +122,10 @@ class _LinuxVideoPlayerState extends State<LinuxVideoPlayer> {
 
       await _player.open(Media(widget.videoUrl), play: widget.autoPlay);
       await _setupSubtitles();
+
+      if (widget.startPosition > Duration.zero) {
+        await _player.seek(widget.startPosition);
+      }
 
       if (mounted) {
         setState(() => _initialized = true);
@@ -390,10 +404,6 @@ class _LinuxVideoPlayerState extends State<LinuxVideoPlayer> {
     _errorSub?.cancel();
     _completedSub?.cancel();
     _positionSub?.cancel();
-
-    try {
-      _videoController.player.dispose();
-    } catch (_) {}
 
     try {
       _player.dispose();

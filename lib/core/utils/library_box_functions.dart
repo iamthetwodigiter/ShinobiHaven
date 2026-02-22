@@ -21,6 +21,53 @@ class LibraryBoxFunction {
     return null;
   }
 
+  static void saveEpisodePosition(String episodeID, Duration position) {
+    if (position.inSeconds <= 0) return;
+    final Map<dynamic, dynamic> rawPositions = _libraryBox.get(
+      'episodePositions',
+      defaultValue: {},
+    );
+    final Map<String, int> positions = rawPositions.map(
+      (key, value) => MapEntry(key.toString(), (value as num).toInt()),
+    );
+    positions[episodeID] = position.inSeconds;
+    _libraryBox.put('episodePositions', positions);
+  }
+
+  static Duration getEpisodePosition(String episodeID) {
+    final rawPositions = _libraryBox.get('episodePositions');
+    if (rawPositions is Map) {
+      final seconds = rawPositions[episodeID];
+      if (seconds is int) {
+        return Duration(seconds: seconds);
+      } else if (seconds is num) {
+        return Duration(seconds: seconds.toInt());
+      }
+    }
+    return Duration.zero;
+  }
+
+  static void saveLastPlayedAnime(Anime anime, String episodeID) {
+    try {
+      _libraryBox.put('lastPlayedAnime', anime.toMap());
+      _libraryBox.put('lastPlayedEpisodeID', episodeID);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  static Map<String, dynamic>? getLastPlayedAnimeData() {
+    final animeData = _libraryBox.get('lastPlayedAnime');
+    final episodeID = _libraryBox.get('lastPlayedEpisodeID');
+    if (animeData is Map && episodeID is String) {
+      return {
+        'anime': Anime.fromMap(Map<String, dynamic>.from(animeData)),
+        'episodeID': episodeID,
+      };
+    }
+    return null;
+  }
+
   static void markLastWatchedEpisode(String animeSlug, String episodeNumber) {
     final existingData = _libraryBox.get('lastWatched');
     final Map<String, String> lastWatchedMap = {};

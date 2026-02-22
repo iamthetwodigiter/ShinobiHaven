@@ -44,6 +44,7 @@ class AnimeCard extends StatelessWidget {
               child: CachedNetworkImage(
                 imageUrl: anime.image,
                 fit: BoxFit.cover,
+                memCacheHeight: 400,
                 placeholder: (context, url) {
                   return Center(child: CircularProgressIndicator.adaptive());
                 },

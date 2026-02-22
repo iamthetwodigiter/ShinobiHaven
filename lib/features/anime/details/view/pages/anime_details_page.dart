@@ -547,6 +547,7 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
                             height: 175,
                             width: 150,
                             fit: BoxFit.cover,
+                            memCacheHeight: 300,
                           ),
                         ),
                         Text(

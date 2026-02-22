@@ -5,6 +5,9 @@ import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/features/anime/common/view/widgets/anime_card.dart';
 import 'package:shinobihaven/features/anime/discovery/view/pages/search_page.dart';
 import 'package:shinobihaven/features/anime/home/dependency_injection/home_provider.dart';
+import 'package:shinobihaven/core/utils/library_box_functions.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shinobihaven/features/anime/details/view/pages/anime_details_page.dart';
 import 'package:shinobihaven/features/anime/home/view/widgets/spotlight_card.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -34,6 +37,36 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Scaffold(
       extendBody: true,
       extendBodyBehindAppBar: true,
+      floatingActionButton: ValueListenableBuilder(
+        valueListenable: Hive.box(
+          'library',
+        ).listenable(keys: ['lastPlayedAnime']),
+        builder: (context, box, child) {
+          final lastPlayedData = LibraryBoxFunction.getLastPlayedAnimeData();
+          if (lastPlayedData == null) return const SizedBox.shrink();
+
+          return FloatingActionButton.extended(
+            onPressed: () {
+              final anime = lastPlayedData['anime'];
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AnimeDetailsPage(animeSlug: anime.slug),
+                ),
+              );
+            },
+            backgroundColor: AppTheme.gradient1,
+            icon: Icon(Icons.play_arrow, color: AppTheme.whiteGradient),
+            label: Text(
+              'Resume Watching',
+              style: TextStyle(
+                color: AppTheme.whiteGradient,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          );
+        },
+      ),
       appBar: AppBar(
         backgroundColor: AppTheme.transparentColor,
         actionsPadding: EdgeInsets.symmetric(horizontal: 25),

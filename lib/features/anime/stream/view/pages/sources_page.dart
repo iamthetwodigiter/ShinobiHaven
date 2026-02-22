@@ -1,6 +1,8 @@
+// ignore_for_file: implementation_imports
 import 'dart:async';
 import 'dart:io';
 import 'package:better_player_plus/better_player_plus.dart';
+import 'package:better_player_plus/src/controls/better_player_material_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,6 +69,8 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
   bool _showSkipOutro = false;
   TimeStamps? _currentIntro;
   TimeStamps? _currentOutro;
+  Duration? _lastSavedPosition;
+  bool _hasMarkedWatchedCurrentEpisode = false;
 
   String get _stableCacheKey =>
       '${widget.anime.slug}-${_currentPlayingEpisode?.episodeID ?? ''}';
@@ -94,6 +98,12 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
 
         _clearAnimeSpecificProviders();
         _currentPlayingEpisode = widget.currentEpisode;
+        if (_currentPlayingEpisode != null) {
+          LibraryBoxFunction.saveLastPlayedAnime(
+            widget.anime,
+            _currentPlayingEpisode!.episodeID,
+          );
+        }
         _isLoadingServers = true;
         _isLoadingSources = true;
         _isLoadingVidSrc = true;
@@ -424,19 +434,6 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     }
   }
 
-  Future<void> _handleSkipOutro() async {
-    if (_currentOutro == null || _betterPlayerController == null) return;
-    try {
-      await _betterPlayerController!.seekTo(
-        Duration(seconds: _currentOutro!.end),
-      );
-      setState(() => _showSkipOutro = false);
-    } catch (e, st) {
-      debugPrint('[SourcesPage._handleSkipOutro] error: $e');
-      debugPrintStack(stackTrace: st);
-    }
-  }
-
   Future<void> _setupBetterPlayer(
     String videoUrl,
     List<Captions> captions,
@@ -486,9 +483,127 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
           handleLifecycle: false,
           autoDispose: false,
           allowedScreenSleep: false,
+          startAt: LibraryBoxFunction.getEpisodePosition(
+            _currentPlayingEpisode?.episodeID ?? '',
+          ),
 
           controlsConfiguration: BetterPlayerControlsConfiguration(
-            playerTheme: BetterPlayerTheme.cupertino,
+            playerTheme: BetterPlayerTheme.custom,
+            customControlsBuilder: (controller, onPlayerVisibilityChanged) {
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  BetterPlayerMaterialControls(
+                    onControlsVisibilityChanged: onPlayerVisibilityChanged,
+                    controlsConfiguration:
+                        controller.betterPlayerControlsConfiguration,
+                  ),
+                  Positioned.fill(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onDoubleTap: () => _handleDoubleTapSeek(false),
+                            child: const SizedBox.expand(),
+                          ),
+                        ),
+                        const Expanded(
+                          child: SizedBox.expand(),
+                        ), // Center area free
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onDoubleTap: () => _handleDoubleTapSeek(true),
+                            child: const SizedBox.expand(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_showSeekOverlay)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black87,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              _seekOverlayText,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (_showSkipIntro)
+                    Positioned(
+                      bottom: 80,
+                      right: 16,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.gradient1,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: _handleSkipIntro,
+                        icon: const Icon(Icons.fast_forward, size: 20),
+                        label: const Text(
+                          'Skip Intro',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (_showSkipOutro)
+                    Positioned(
+                      bottom: 80,
+                      right: 16,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.gradient1,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: _playNextEpisode,
+                        icon: const Icon(Icons.skip_next, size: 20),
+                        label: const Text(
+                          'Skip Outro',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
             showControls: true,
             showControlsOnInitialize: true,
             enableFullscreen: true,
@@ -592,6 +707,39 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                   _disableWakelock();
                   _cancelSkipOverlay();
                   _tryNextServerOnError();
+                }
+                break;
+
+              case BetterPlayerEventType.progress:
+                if (mounted &&
+                    !_isDisposing &&
+                    _betterPlayerController != null) {
+                  final position =
+                      event.parameters?['progress'] as Duration? ??
+                      _betterPlayerController!
+                          .videoPlayerController
+                          ?.value
+                          .position;
+                  if (position != null && _currentPlayingEpisode != null) {
+                    final totalDuration =
+                        _betterPlayerController!
+                            .videoPlayerController
+                            ?.value
+                            .duration ??
+                        Duration.zero;
+                    _checkAndMarkWatched(position, totalDuration);
+
+                    if (_lastSavedPosition == null ||
+                        (position.inSeconds - _lastSavedPosition!.inSeconds)
+                                .abs() >=
+                            5) {
+                      _lastSavedPosition = position;
+                      LibraryBoxFunction.saveEpisodePosition(
+                        _currentPlayingEpisode!.episodeID,
+                        position,
+                      );
+                    }
+                  }
                 }
                 break;
 
@@ -699,13 +847,14 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
       _videoURL = null;
       _hasError = false;
       _errorMessage = null;
+      _hasMarkedWatchedCurrentEpisode = false;
     });
 
-    LibraryBoxFunction.addToLibrary(widget.anime, episode.episodeID);
     LibraryBoxFunction.markLastWatchedEpisode(
       widget.anime.slug,
       episode.episodeNumber,
     );
+    LibraryBoxFunction.saveLastPlayedAnime(widget.anime, episode.episodeID);
 
     Future.delayed(Duration(milliseconds: 300), () {
       if (mounted && !_isDisposing) {
@@ -762,6 +911,33 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     _cancelInitializationTimer();
     _cancelSeekOverlay();
     _cancelSkipOverlay();
+  }
+
+  void _checkAndMarkWatched(Duration position, Duration totalDuration) {
+    if (_hasMarkedWatchedCurrentEpisode || _currentPlayingEpisode == null) {
+      return;
+    }
+
+    if (_currentOutro != null && _currentOutro!.start > 0) {
+      if (position.inSeconds >= _currentOutro!.start) {
+        _markAsWatched();
+      }
+    } else if (totalDuration.inSeconds > 0) {
+      if (position.inSeconds >= totalDuration.inSeconds * 0.9) {
+        _markAsWatched();
+      }
+    }
+  }
+
+  void _markAsWatched() {
+    if (!_hasMarkedWatchedCurrentEpisode && _currentPlayingEpisode != null) {
+      LibraryBoxFunction.addToLibrary(
+        widget.anime,
+        _currentPlayingEpisode!.episodeID,
+      );
+      _hasMarkedWatchedCurrentEpisode = true;
+      if (mounted) setState(() {});
+    }
   }
 
   void _cancelSeekOverlay() {
@@ -979,126 +1155,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         child: (_videoReady && !_isDisposing)
             ? (Platform.isAndroid || Platform.isIOS)
                   ? (_betterPlayerController != null
-                        ? Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              GestureDetector(
-                                onDoubleTapDown: (details) {
-                                  final box =
-                                      context.findRenderObject() as RenderBox;
-                                  final localPosition = box.globalToLocal(
-                                    details.globalPosition,
-                                  );
-                                  final boxWidth = box.size.width;
-
-                                  final isLeftSide =
-                                      localPosition.dx < boxWidth / 2.5;
-
-                                  _handleDoubleTapSeek(!isLeftSide);
-                                },
-                                child: BetterPlayer(
-                                  controller: _betterPlayerController!,
-                                ),
-                              ),
-
-                              if (_showSeekOverlay)
-                                Positioned.fill(
-                                  child: IgnorePointer(
-                                    child: Center(
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 24,
-                                          vertical: 12,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black87,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          _seekOverlayText,
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                            decoration: TextDecoration.none,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                              // Skip Intro button
-                              if (_showSkipIntro)
-                                Positioned(
-                                  bottom: 80,
-                                  right: 16,
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTheme.gradient1,
-                                        foregroundColor: Colors.white,
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 20,
-                                          vertical: 12,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                      onPressed: _handleSkipIntro,
-                                      icon: Icon(Icons.fast_forward, size: 20),
-                                      label: Text(
-                                        'Skip Intro',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                              // Skip Outro button
-                              if (_showSkipOutro)
-                                Positioned(
-                                  bottom: 80,
-                                  right: 16,
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTheme.gradient1,
-                                        foregroundColor: Colors.white,
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 20,
-                                          vertical: 12,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                      onPressed: _handleSkipOutro,
-                                      icon: Icon(Icons.fast_forward, size: 20),
-                                      label: Text(
-                                        'Skip Outro',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          )
+                        ? BetterPlayer(controller: _betterPlayerController!)
                         : Container(
                             color: AppTheme.primaryBlack,
                             child: Center(
@@ -1110,7 +1167,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                                   ),
                                   SizedBox(height: 16),
                                   Text(
-                                    'Initializing player...',
+                                    'Controller not initialized...',
                                     style: TextStyle(
                                       color: AppTheme.whiteGradient,
                                       fontSize: 14,
@@ -1136,6 +1193,18 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                       captions: _availableSubtitles,
                       autoPlay: true,
                       aspectRatio: 16 / 9,
+                      startPosition: LibraryBoxFunction.getEpisodePosition(
+                        _currentPlayingEpisode?.episodeID ?? '',
+                      ),
+                      onPositionChanged: (position, totalDuration) {
+                        if (_currentPlayingEpisode != null) {
+                          _checkAndMarkWatched(position, totalDuration);
+                          LibraryBoxFunction.saveEpisodePosition(
+                            _currentPlayingEpisode!.episodeID,
+                            position,
+                          );
+                        }
+                      },
                       onFinished: _playNextEpisode,
                       onError: (err) {
                         if (mounted) {

@@ -26,10 +26,7 @@ class SpotlightCard extends StatelessWidget {
             );
           },
           child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              
-            ),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(18)),
             clipBehavior: Clip.antiAlias,
             child: Stack(
               alignment: Alignment.bottomLeft,
@@ -39,6 +36,7 @@ class SpotlightCard extends StatelessWidget {
                   height: 400,
                   width: size.width,
                   fit: BoxFit.cover,
+                  memCacheHeight: 800,
                   placeholder: (context, url) => Container(
                     height: 400,
                     width: size.width,
@@ -103,7 +101,11 @@ class SpotlightCard extends StatelessWidget {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.mic, size: 16, color: AppTheme.whiteGradient),
+                                Icon(
+                                  Icons.mic,
+                                  size: 16,
+                                  color: AppTheme.whiteGradient,
+                                ),
                                 SizedBox(width: 4),
                                 Text(
                                   anime.dubCount ?? '',
@@ -119,7 +121,11 @@ class SpotlightCard extends StatelessWidget {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.closed_caption, size: 16, color: AppTheme.whiteGradient),
+                                Icon(
+                                  Icons.closed_caption,
+                                  size: 16,
+                                  color: AppTheme.whiteGradient,
+                                ),
                                 SizedBox(width: 4),
                                 Text(
                                   anime.subCount ?? '',
@@ -135,7 +141,11 @@ class SpotlightCard extends StatelessWidget {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.play_circle, size: 16, color: AppTheme.whiteGradient),
+                                Icon(
+                                  Icons.play_circle,
+                                  size: 16,
+                                  color: AppTheme.whiteGradient,
+                                ),
                                 SizedBox(width: 4),
                                 Text(
                                   anime.type ?? '',
@@ -151,7 +161,11 @@ class SpotlightCard extends StatelessWidget {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.timelapse_rounded, size: 16, color: AppTheme.whiteGradient),
+                                Icon(
+                                  Icons.timelapse_rounded,
+                                  size: 16,
+                                  color: AppTheme.whiteGradient,
+                                ),
                                 SizedBox(width: 4),
                                 Text(
                                   anime.duration ?? '',
