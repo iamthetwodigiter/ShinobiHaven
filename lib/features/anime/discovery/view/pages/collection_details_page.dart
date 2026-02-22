@@ -99,7 +99,7 @@ class _CollectionDetailsPageState extends State<CollectionDetailsPage> {
           : ListView.separated(
               padding: EdgeInsets.symmetric(vertical:0),
               itemCount: _items.length,
-              separatorBuilder: (_, __) => SizedBox(height: 12),
+              separatorBuilder: (_, _) => SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final anime = _items[index];
                 return Card(

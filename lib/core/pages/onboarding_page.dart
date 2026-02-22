@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_onboarding_slider/flutter_onboarding_slider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +6,6 @@ import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/core/theme/theme_provider.dart';
 import 'package:shinobihaven/core/utils/toast.dart';
 import 'package:shinobihaven/core/utils/user_box_functions.dart';
-import 'package:shinobihaven/core/widgets/theme_choice.dart';
 import 'package:shinobihaven/features/anime/common/view/pages/landing_page.dart';
 import 'package:toastification/toastification.dart';
 
@@ -21,15 +19,6 @@ class OnBoardingPage extends ConsumerStatefulWidget {
 class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
   late final TextEditingController _nameController;
   late final FocusNode _focusNode;
-
-  final OutlineInputBorder _border = OutlineInputBorder(
-    borderSide: BorderSide(color: AppTheme.whiteGradient),
-    borderRadius: BorderRadius.circular(15),
-  );
-  final OutlineInputBorder _focusedBorder = OutlineInputBorder(
-    borderSide: BorderSide(color: AppTheme.gradient1),
-    borderRadius: BorderRadius.circular(15),
-  );
 
   final List<String> _assetsPath = [
     'assets/images/hashirama.jpg',
@@ -87,25 +76,28 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final availableWidth = (size.width - 60);
     final accentColor = ref.watch(themeModeProvider.notifier).getAccentColor();
-    return OnBoardingSlider(
-      headerBackgroundColor: AppTheme.whiteGradient,
-      controllerColor: Theme.brightnessOf(context) == Brightness.dark
-          ? AppTheme.whiteGradient
-          : AppTheme.blackGradient,
-      skipIcon: Icon(Icons.arrow_forward, color: AppTheme.gradient1),
-      onFinish: () {
-        if (!_userConsent) {
-          Toast(
-            context: context,
-            title: 'User Consent Required',
-            description: 'Please agree the above consent to proceed',
-            type: ToastificationType.warning,
-          );
-          return;
-        }
-        setState(() {
+
+    return Scaffold(
+      body: OnBoardingSlider(
+        headerBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        controllerColor: AppTheme.gradient1,
+        skipIcon: const Icon(
+          Icons.arrow_forward_rounded,
+          color: Colors.white,
+          size: 28,
+        ),
+        onFinish: () {
+          if (!_userConsent) {
+            Toast(
+              context: context,
+              title: 'Sensei, hold on!',
+              description:
+                  'Please agree to the disclaimer to start your journey.',
+              type: ToastificationType.warning,
+            );
+            return;
+          }
           UserBoxFunctions.toggleDarkMode(_currentThemeChoice);
           UserBoxFunctions.setUserName(
             _nameController.text.isEmpty
@@ -116,369 +108,372 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
             _assetsPath.elementAt(_currentProfileChoice),
           );
           UserBoxFunctions.markFirstSetup();
-        });
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => LandingPage()),
-          (route) => false,
-        );
-      },
-      finishButtonText: "Let's Go",
-      finishButtonTextStyle: TextStyle(
-        color: AppTheme.gradient1,
-        fontSize: 25,
-        fontWeight: FontWeight.bold,
-      ),
-      finishButtonStyle: FinishButtonStyle(
-        backgroundColor: AppTheme.transparentColor,
-        foregroundColor: AppTheme.gradient1,
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      ),
-      background: [SizedBox(), SizedBox(), SizedBox(), SizedBox()],
-      centerBackground: true,
-      totalPage: 4,
-      speed: 0.9,
-      pageBodies: [
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: <Widget>[
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome to',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    'ShinobiHaven',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.gradient1,
-                      letterSpacing: 1.2,
-                      shadows: [
-                        Shadow(
-                          color: AppTheme.gradient1.withAlpha(51),
-                          blurRadius: 6,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                'Discover and watch thousands of anime episodes and movies. Enjoy seamless streaming and a personalized experience.',
-                style: TextStyle(fontSize: 18),
-              ),
-            ],
+
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const LandingPage()),
+            (route) => false,
+          );
+        },
+        finishButtonText: "Start Journey",
+        finishButtonTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+        ),
+        finishButtonStyle: FinishButtonStyle(
+          backgroundColor: AppTheme.gradient1,
+          elevation: 10,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
           ),
         ),
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            _focusNode.unfocus();
-          },
-          child: SingleChildScrollView(
-            child: Container(
-              width: size.width,
-              padding: EdgeInsets.symmetric(horizontal: 30),
-              child: Column(
-                spacing: 8,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: <Widget>[
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'What should we call you?',
-                        style: TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.gradient1,
-                          letterSpacing: 1.2,
-                          shadows: [
-                            Shadow(
-                              color: AppTheme.gradient1.withAlpha(51),
-                              blurRadius: 6,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  Material(
-                    elevation: 4,
-                    borderRadius: BorderRadius.circular(15),
-                    child: TextField(
-                      controller: _nameController,
-                      focusNode: _focusNode,
-                      cursorColor: AppTheme.gradient1,
-                      style: TextStyle(fontSize: 16),
-                      onSubmitted: (query) {},
-                      decoration: InputDecoration(
-                        hintText: _namePlaceholders.elementAt(
-                          _currentProfileChoice,
-                        ),
-                        hintStyle: TextStyle(fontSize: 16),
-                        labelText: 'Enter a Username',
-                        labelStyle: TextStyle(
-                          color: Theme.brightnessOf(context) == Brightness.dark
-                              ? AppTheme.whiteGradient
-                              : AppTheme.blackGradient,
-                        ),
-                        floatingLabelBehavior: FloatingLabelBehavior.always,
-                        border: _border,
-                        enabledBorder: _border,
-                        focusedBorder: _focusedBorder,
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 18,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Text('Choose a profile', style: TextStyle(fontSize: 18)),
-                  Container(
-                    width: size.width,
-                    margin: (Platform.isAndroid || Platform.isIOS)
-                        ? null
-                        : EdgeInsets.symmetric(horizontal: 150),
-                    child: SingleChildScrollView(
-                      child: Wrap(
-                        alignment: WrapAlignment.spaceEvenly,
-                        spacing: 15,
-                        runSpacing: 15,
-                        children: List.generate(_assetsPath.length, (index) {
-                          final asset = _assetsPath.elementAt(index);
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _focusNode.unfocus();
-                                _currentProfileChoice = index;
-                              });
-                            },
-                            child: Container(
-                              height: (Platform.isAndroid || Platform.isIOS)
-                                  ? size.width / 4
-                                  : 125,
-                              width: (Platform.isAndroid || Platform.isIOS)
-                                  ? size.width / 4
-                                  : 125,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: _currentProfileChoice == index
-                                    ? Border.all(
-                                        color: AppTheme.gradient1,
-                                        width: 5,
-                                      )
-                                    : null,
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(125),
-                                child: Image.asset(
-                                  asset,
-                                  height: 95,
-                                  width: 95,
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                    ),
-                  ),
-                  SizedBox(),
-                ],
-              ),
-            ),
+        background: [
+          _onboardingBg('assets/images/onboarding_poster.png'),
+          _onboardingBg(_assetsPath[_currentProfileChoice]),
+          const SizedBox.shrink(),
+          const SizedBox.shrink(),
+        ],
+        totalPage: 4,
+        speed: 1.5,
+        pageBodies: [
+          _onboardingPage(
+            title: 'Welcome to',
+            subtitle: 'ShinobiHaven',
+            description:
+                'Your ultimate destination for everything anime. Stream, track, and discover with a premium experience designed for true fans.',
+            isTitleGradient: true,
           ),
-        ),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 30),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Column(
-                spacing: 15,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Make Yourself Home',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          _buildProfilePage(size),
+          _buildThemePage(accentColor),
+          _onboardingPage(
+            title: 'Just a heads up!',
+            subtitle: 'Disclaimer',
+            centered: true,
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppTheme.gradient1.withAlpha(20),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  Text(
-                    'How would like your app?',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.normal,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 50),
-              Padding(
-                padding: (Platform.isAndroid || Platform.isIOS)
-                    ? EdgeInsets.zero
-                    : EdgeInsets.symmetric(horizontal: 200),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    ThemeChoice(
-                      currentThemeChoice: _currentThemeChoice,
-                      title: 'Light Mode',
-                      titleTextColor: AppTheme.blackGradient,
-                      themeColor: AppTheme.whiteGradient,
-                      themeMode: 0,
-                      onTap: () {
-                        setState(() {
-                          _currentThemeChoice = 0;
-                          _setThemeMode(0);
-                        });
-                      },
-                    ),
-                    ThemeChoice(
-                      currentThemeChoice: _currentThemeChoice,
-                      title: 'Dark Mode',
-                      titleTextColor: AppTheme.whiteGradient,
-                      themeColor: AppTheme.blackGradient,
-                      themeMode: 1,
-                      onTap: () {
-                        setState(() {
-                          _currentThemeChoice = 1;
-                          _setThemeMode(1);
-                        });
-                      },
-                    ),
-                    ThemeChoice(
-                      currentThemeChoice: _currentThemeChoice,
-                      title: 'System Choice',
-                      themeColor:
-                          Theme.brightnessOf(context) == Brightness.light
-                          ? AppTheme.whiteGradient
-                          : AppTheme.blackGradient,
-                      titleTextColor:
-                          Theme.brightnessOf(context) == Brightness.dark
-                          ? AppTheme.whiteGradient
-                          : AppTheme.blackGradient,
-                      themeMode: 2,
-                      onTap: () {
-                        setState(() {
-                          _currentThemeChoice = 2;
-                          _setThemeMode(2);
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 50),
-              Expanded(
-                child: GridView.count(
-                  padding: EdgeInsets.only(top: 8),
-                  crossAxisCount: !(Platform.isAndroid || Platform.isIOS)
-                      ? 15
-                      : (availableWidth ~/ 60).clamp(1, 6),
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  children: AccentColors.accentColors.map((color) {
-                    return Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _setAccentColor(color);
-                            });
-                          },
-                          child: Container(
-                            height: 50,
-                            width: 50,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: color,
-                            ),
-                          ),
-                        ),
-                        if (color.toARGB32() == accentColor.toARGB32())
-                          Icon(Icons.done),
-                      ],
-                    );
-                  }).toList(),
-                ),
-              ),
-              SizedBox(height: 28),
-            ],
-          ),
-        ),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: <Widget>[
-              Column(
-                spacing: 15,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Just a heads up!',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                  ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
                       Icon(
-                        Icons.info_outline_rounded,
+                        Icons.shield_outlined,
                         color: AppTheme.gradient1,
-                        size: 30,
+                        size: 32,
                       ),
-                      SizedBox(width: 10),
-                      Expanded(
+                      const SizedBox(width: 15),
+                      const Expanded(
                         child: Text(
-                          'ShinobiHaven does not store any files on our server, we only linked to the media which is hosted on 3rd party services.',
+                          'ShinobiHaven links to third-party content. We do not host any files on our servers.',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-              SwitchListTile.adaptive(
-                value: _userConsent,
-                inactiveThumbColor: AppTheme.greyGradient,
-                activeThumbColor: AppTheme.whiteGradient,
-                onChanged: (consent) {
-                  setState(() {
-                    _userConsent = consent;
-                  });
-                },
-                activeTrackColor: AppTheme.gradient1,
-                title: Text(
-                  'I agree to the disclaimer',
-                  style: TextStyle(fontSize: 18),
                 ),
-                subtitle: Text(
-                  'And I will not use the app to access, distribute, or promote pirated or illegal content. I understand ShinobiHaven only links to third‑party hosts and I am responsible for my use.',
+                const SizedBox(height: 30),
+                SwitchListTile.adaptive(
+                  value: _userConsent,
+                  activeThumbColor: AppTheme.gradient1,
+                  onChanged: (v) => setState(() => _userConsent = v),
+                  title: const Text(
+                    'I agree to the terms',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text(
+                    'I will use this app responsibly and follow local laws.',
+                  ),
                 ),
-              ),
-              Text(
-                'Browse safely and enjoy your anime binge sessions without worries ❤️',
-                style: TextStyle(fontSize: 18),
-              ),
-              SizedBox(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _onboardingBg(String asset) {
+    return Container(
+      width: MediaQuery.sizeOf(context).width,
+      height: 400,
+      decoration: BoxDecoration(
+        image: DecorationImage(image: AssetImage(asset), fit: BoxFit.cover),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppTheme.blackGradient,
+              AppTheme.blackGradient.withAlpha(150),
+              AppTheme.blackGradient,
             ],
           ),
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _onboardingPage({
+    required String title,
+    required String subtitle,
+    String? description,
+    bool isTitleGradient = false,
+    Widget? child,
+    bool centered = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(30),
+      child: Column(
+        mainAxisAlignment: centered
+            ? MainAxisAlignment.center
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!centered) const SizedBox(height: 350),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 42,
+              fontWeight: FontWeight.w900,
+              color: isTitleGradient ? AppTheme.gradient1 : null,
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 20),
+          if (description != null)
+            Text(
+              description,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+                height: 1.5,
+              ),
+            ),
+          const SizedBox(height: 20),
+          ?child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfilePage(Size size) {
+    return Padding(
+      padding: const EdgeInsets.all(30),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          const Spacer(),
+          Text(
+            'IDENTIFY YOURSELF',
+            style: TextStyle(
+              letterSpacing: 2,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              color: AppTheme.gradient1,
+            ),
+          ),
+          const Text(
+            'Custom Profile',
+            style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _nameController,
+            focusNode: _focusNode,
+            onTap: () {
+              setState(() {
+                _focusNode.hasFocus
+                    ? _focusNode.unfocus()
+                    : _focusNode.requestFocus();
+              });
+            },
+            decoration: InputDecoration(
+              labelText: !_focusNode.hasFocus
+                  ? _namePlaceholders[_currentProfileChoice]
+                  : 'Username',
+              labelStyle: TextStyle(color: AppTheme.whiteGradient, fontSize: 16),
+              hintText: _namePlaceholders[_currentProfileChoice],
+              filled: true,
+              fillColor: AppTheme.surfaceColor(context),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15),
+                borderSide: BorderSide(
+                  color: AppTheme.gradient1.withAlpha(50),
+                  width: 1.5,
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15),
+                borderSide: BorderSide(
+                  color: AppTheme.gradient1.withAlpha(50),
+                  width: 1.5,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15),
+                borderSide: BorderSide(color: AppTheme.gradient1, width: 2),
+              ),
+              prefixIcon: const Icon(Icons.person_outline),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Pick an Avatar',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          Flexible(
+            child: GridView.builder(
+              itemCount: _assetsPath.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: size.width > 600 ? 6 : 4,
+                mainAxisSpacing: 5,
+                crossAxisSpacing: 5,
+              ),
+              itemBuilder: (context, index) {
+                final isSelected = _currentProfileChoice == index;
+                return GestureDetector(
+                  onTap: () => setState(() => _currentProfileChoice = index),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected
+                            ? AppTheme.gradient1
+                            : Colors.transparent,
+                        width: 3,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      backgroundImage: AssetImage(_assetsPath[index]),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildThemePage(Color accentColor) {
+    return Padding(
+      padding: const EdgeInsets.all(30),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 50),
+          Text(
+            'AESTHETICS',
+            style: TextStyle(
+              letterSpacing: 2,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              color: AppTheme.gradient1,
+            ),
+          ),
+          const Text(
+            'Visual Style',
+            style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 30),
+          Row(
+            children: [
+              _styleCard('Light', Icons.wb_sunny_outlined, 0),
+              const SizedBox(width: 15),
+              _styleCard('Dark', Icons.nightlight_round_outlined, 1),
+              const SizedBox(width: 15),
+              _styleCard('System', Icons.settings_suggest_outlined, 2),
+            ],
+          ),
+          const SizedBox(height: 30),
+          const Text(
+            'Accent Color',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: GridView.builder(
+              itemCount: AccentColors.accentColors.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 6,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+              ),
+              itemBuilder: (context, index) {
+                final color = AccentColors.accentColors[index];
+                final isSelected = color.toARGB32() == accentColor.toARGB32();
+                return GestureDetector(
+                  onTap: () => _setAccentColor(color),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected ? Colors.white : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                    child: isSelected
+                        ? const Icon(Icons.check, color: Colors.white, size: 16)
+                        : null,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _styleCard(String title, IconData icon, int mode) {
+    final isSelected = _currentThemeChoice == mode;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() {
+          _currentThemeChoice = mode;
+          _setThemeMode(mode);
+        }),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppTheme.gradient1
+                : AppTheme.gradient1.withAlpha(20),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: isSelected ? Colors.white : AppTheme.gradient1),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : AppTheme.gradient1,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

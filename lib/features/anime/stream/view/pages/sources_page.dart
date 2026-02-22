@@ -19,10 +19,14 @@ import 'package:shimmer/shimmer.dart';
 import 'package:shinobihaven/features/anime/stream/view/pages/linux_video_player.dart';
 import 'package:shinobihaven/features/download/dependency_injection/downloads_provider.dart';
 import 'package:shinobihaven/features/download/repository/downloads_repository.dart';
+import 'package:shinobihaven/features/download/view/pages/downloads_page.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:shinobihaven/core/services/player_service.dart';
+import 'package:shinobihaven/core/services/notification_service.dart';
 import 'package:toastification/toastification.dart';
 
 class SourcesPage extends ConsumerStatefulWidget {
+  static bool isPlayerVisible = false;
   final Anime anime;
   final List<Episodes> episodes;
   final Episodes currentEpisode;
@@ -71,6 +75,11 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
   TimeStamps? _currentOutro;
   Duration? _lastSavedPosition;
   bool _hasMarkedWatchedCurrentEpisode = false;
+  final ScrollController _episodesScrollController = ScrollController();
+  StreamSubscription? _playerStopSubscription;
+  StreamSubscription? _playerPlaySubscription;
+  StreamSubscription? _playerPauseSubscription;
+  StreamSubscription? _playerSeekSubscription;
 
   String get _stableCacheKey =>
       '${widget.anime.slug}-${_currentPlayingEpisode?.episodeID ?? ''}';
@@ -82,6 +91,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
   @override
   void initState() {
     super.initState();
+    SourcesPage.isPlayerVisible = true;
     WidgetsBinding.instance.addObserver(this);
 
     final currentSectionKey = _getSectionKey();
@@ -94,6 +104,30 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && !_isDisposing) {
+        _playerStopSubscription = PlayerService().onStopRequested.listen((_) {
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+        });
+
+        _playerPlaySubscription = PlayerService().onPlayRequested.listen((_) {
+          _betterPlayerController?.play();
+        });
+
+        _playerPauseSubscription = PlayerService().onPauseRequested.listen((_) {
+          _betterPlayerController?.pause();
+        });
+
+        _playerSeekSubscription = PlayerService().onSeekRequested.listen((
+          offset,
+        ) {
+          final currentPos =
+              _betterPlayerController?.videoPlayerController?.value.position;
+          if (currentPos != null) {
+            _betterPlayerController?.seekTo(currentPos + offset);
+          }
+        });
+
         final delay = isDifferentSection ? 500 : 300;
 
         _clearAnimeSpecificProviders();
@@ -120,12 +154,19 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
   @override
   void dispose() {
     _isDisposing = true;
+    SourcesPage.isPlayerVisible = false;
     WidgetsBinding.instance.removeObserver(this);
 
     _forceDisposePlayer();
     _disableWakelock();
     _cancelSeekOverlay();
     _cancelSkipOverlay();
+    _playerStopSubscription?.cancel();
+    _playerPlaySubscription?.cancel();
+    _playerPauseSubscription?.cancel();
+    _playerSeekSubscription?.cancel();
+    PlayerService().clearActivePlayer();
+    NotificationService.cancelNotification(NotificationIds.playerPlayback);
 
     try {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -135,6 +176,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
       debugPrintStack(stackTrace: st);
     }
 
+    _episodesScrollController.dispose();
     super.dispose();
   }
 
@@ -467,11 +509,21 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         notificationConfiguration: BetterPlayerNotificationConfiguration(
           showNotification: true,
           title: widget.anime.title,
-          author: _currentPlayingEpisode?.title,
+          author: 'Episode ${_currentPlayingEpisode?.episodeNumber ?? ''}',
           imageUrl: widget.anime.image,
         ),
+
         useAsmsSubtitles: true,
         useAsmsTracks: true,
+      );
+
+      PlayerService().setActivePlayer(
+        PlayerState(
+          anime: widget.anime,
+          episodes: widget.episodes,
+          currentEpisode: _currentPlayingEpisode!,
+          serverId: _currentServer?.dataID,
+        ),
       );
 
       _betterPlayerController = BetterPlayerController(
@@ -489,121 +541,122 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
 
           controlsConfiguration: BetterPlayerControlsConfiguration(
             playerTheme: BetterPlayerTheme.custom,
-            customControlsBuilder: (controller, onPlayerVisibilityChanged) {
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  BetterPlayerMaterialControls(
-                    onControlsVisibilityChanged: onPlayerVisibilityChanged,
-                    controlsConfiguration:
-                        controller.betterPlayerControlsConfiguration,
-                  ),
-                  Positioned.fill(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.translucent,
-                            onDoubleTap: () => _handleDoubleTapSeek(false),
-                            child: const SizedBox.expand(),
-                          ),
-                        ),
-                        const Expanded(
-                          child: SizedBox.expand(),
-                        ), // Center area free
-                        Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.translucent,
-                            onDoubleTap: () => _handleDoubleTapSeek(true),
-                            child: const SizedBox.expand(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_showSeekOverlay)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
+            customControlsBuilder:
+                (controller, onPlayerVisibilityChanged, config) {
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      BetterPlayerMaterialControls(
+                        onControlsVisibilityChanged: onPlayerVisibilityChanged,
+                        controlsConfiguration:
+                            controller.betterPlayerControlsConfiguration,
+                      ),
+                      Positioned.fill(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onDoubleTap: () => _handleDoubleTapSeek(false),
+                                child: const SizedBox.expand(),
+                              ),
                             ),
-                            decoration: BoxDecoration(
-                              color: Colors.black87,
-                              borderRadius: BorderRadius.circular(12),
+                            const Expanded(
+                              child: SizedBox.expand(),
+                            ), // Center area free
+                            Expanded(
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onDoubleTap: () => _handleDoubleTapSeek(true),
+                                child: const SizedBox.expand(),
+                              ),
                             ),
-                            child: Text(
-                              _seekOverlayText,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.none,
+                          ],
+                        ),
+                      ),
+                      if (_showSeekOverlay)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black87,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  _seekOverlayText,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.none,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  if (_showSkipIntro)
-                    Positioned(
-                      bottom: 80,
-                      right: 16,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.gradient1,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: _handleSkipIntro,
-                        icon: const Icon(Icons.fast_forward, size: 20),
-                        label: const Text(
-                          'Skip Intro',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  if (_showSkipOutro)
-                    Positioned(
-                      bottom: 80,
-                      right: 16,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.gradient1,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      if (_showSkipIntro)
+                        Positioned(
+                          bottom: 80,
+                          right: 16,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.gradient1,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: _handleSkipIntro,
+                            icon: const Icon(Icons.fast_forward, size: 20),
+                            label: const Text(
+                              'Skip Intro',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
-                        onPressed: _playNextEpisode,
-                        icon: const Icon(Icons.skip_next, size: 20),
-                        label: const Text(
-                          'Skip Outro',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                      if (_showSkipOutro)
+                        Positioned(
+                          bottom: 80,
+                          right: 16,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.gradient1,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: _playNextEpisode,
+                            icon: const Icon(Icons.skip_next, size: 20),
+                            label: const Text(
+                              'Skip Outro',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                ],
-              );
-            },
+                    ],
+                  );
+                },
             showControls: true,
             showControlsOnInitialize: true,
             enableFullscreen: true,
@@ -688,6 +741,9 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                     _currentPlayingEpisode!.episodeNumber,
                   );
                 }
+                break;
+
+              case BetterPlayerEventType.pause:
                 break;
 
               case BetterPlayerEventType.finished:
@@ -850,6 +906,10 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
       _hasMarkedWatchedCurrentEpisode = false;
     });
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToCurrentEpisode();
+    });
+
     LibraryBoxFunction.markLastWatchedEpisode(
       widget.anime.slug,
       episode.episodeNumber,
@@ -861,6 +921,36 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
         _loadServersAndStream();
       }
     });
+  }
+
+  void _scrollToCurrentEpisode() {
+    if (!_episodesScrollController.hasClients ||
+        _currentPlayingEpisode == null) {
+      return;
+    }
+
+    final index = widget.episodes.indexOf(_currentPlayingEpisode!);
+    if (index != -1) {
+      final crossAxisCount = (Platform.isAndroid || Platform.isIOS) ? 5 : 8;
+      final row = index ~/ crossAxisCount;
+
+      // Estimate item height: (AvailableWidth - Padding) / CrossAxisCount / AspectRatio + Spacing
+      final screenWidth = MediaQuery.sizeOf(context).width;
+      final padding = 40.0; // 20 on each side
+      final availableWidth = screenWidth - padding;
+      final itemWidth =
+          (availableWidth - (crossAxisCount - 1) * 12) / crossAxisCount;
+      final itemHeight = itemWidth / 1.5;
+      final spacing = 12.0;
+
+      final offset = row * (itemHeight + spacing);
+
+      _episodesScrollController.animateTo(
+        offset,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOutCubic,
+      );
+    }
   }
 
   void _switchServer(Server server) {
@@ -1256,25 +1346,25 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
 
   Widget _buildServersList() {
     final size = MediaQuery.sizeOf(context);
-    return Container(
+    return SizedBox(
       width: Platform.isAndroid || Platform.isIOS
           ? double.infinity
           : size.width * 0.5,
-      margin: EdgeInsets.symmetric(horizontal: 15),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.only(left: 15, bottom: 10, right: 15),
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Available Servers',
+                  'SERVERS',
                   style: TextStyle(
-                    color: AppTheme.gradient1,
+                    color: AppTheme.whiteGradient,
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
                   ),
                 ),
                 if (_videoReady)
@@ -1612,7 +1702,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                                                 : ListView.separated(
                                                     itemCount:
                                                         hlsVariants.length,
-                                                    separatorBuilder: (_, __) =>
+                                                    separatorBuilder: (_, _) =>
                                                         Divider(
                                                           color: AppTheme
                                                               .gradient1
@@ -1662,7 +1752,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                           if (selectedVariant == null) return;
 
                           ref
-                              .read(downloadsProvider.notifier)
+                              .read(downloadsViewModelProvider.notifier)
                               .startDownload(
                                 animeSlug: widget.anime.slug,
                                 animeTitle: widget.anime.title,
@@ -1735,7 +1825,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                                                 : ListView.separated(
                                                     itemCount:
                                                         qualitySources.length,
-                                                    separatorBuilder: (_, __) =>
+                                                    separatorBuilder: (_, _) =>
                                                         Divider(
                                                           color: AppTheme
                                                               .gradient1
@@ -1796,7 +1886,7 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
 
                           if (selectedSource == null) return;
                           ref
-                              .read(downloadsProvider.notifier)
+                              .read(downloadsViewModelProvider.notifier)
                               .startDownload(
                                 animeSlug: widget.anime.slug,
                                 animeTitle: widget.anime.title,
@@ -1827,9 +1917,9 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
             ),
           ),
           SizedBox(
-            height: 80,
-            width: 200,
+            height: 90,
             child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               scrollDirection: Axis.horizontal,
               itemCount: _availableServers.length,
               itemBuilder: (context, index) {
@@ -1843,18 +1933,19 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
                       padding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
+                        horizontal: 20,
+                        vertical: 12,
                       ),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppTheme.gradient1
-                            : AppTheme.primaryBlack,
-                        borderRadius: BorderRadius.circular(10),
+                            : AppTheme.gradient1.withAlpha(20),
+                        borderRadius: BorderRadius.circular(15),
                         border: Border.all(
                           color: isSelected
                               ? AppTheme.gradient1
-                              : AppTheme.gradient1.withValues(alpha: 0.3),
+                              : AppTheme.gradient1.withAlpha(50),
+                          width: 1.5,
                         ),
                       ),
                       child: Column(
@@ -1948,38 +2039,40 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
   }
 
   Widget _buildEpisodesList() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_isDisposing && mounted) _scrollToCurrentEpisode();
+    });
+
     return Container(
-      height: Platform.isAndroid || Platform.isIOS ? 200 : null,
+      height: Platform.isAndroid || Platform.isIOS ? 300 : null,
       width: Platform.isAndroid || Platform.isIOS ? double.infinity : 400,
-      margin: EdgeInsets.fromLTRB(15, 30, 30, 30),
-      padding: EdgeInsets.only(top: 10),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppTheme.gradient1, width: 0.5),
-        borderRadius: BorderRadius.circular(10),
-      ),
+      margin: EdgeInsets.only(bottom: 30),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.only(left: 15, bottom: 10),
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: Text(
-              'All Episodes',
+              'EPISODES',
               style: TextStyle(
-                color: AppTheme.gradient1,
+                color: AppTheme.whiteGradient,
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
               ),
             ),
           ),
           Expanded(
             child: GridView.builder(
+              controller: _episodesScrollController,
+              physics: const BouncingScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: Platform.isAndroid || Platform.isIOS ? 4 : 8,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: 2,
+                crossAxisCount: Platform.isAndroid || Platform.isIOS ? 5 : 8,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.5,
               ),
-              padding: EdgeInsets.symmetric(horizontal: 10),
+              padding: EdgeInsets.symmetric(horizontal: 20),
               itemCount: widget.episodes.length,
               itemBuilder: (context, index) {
                 final episode = widget.episodes[index];
@@ -1993,12 +2086,13 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                     decoration: BoxDecoration(
                       color: isCurrentEpisode
                           ? AppTheme.gradient1
-                          : AppTheme.whiteGradient,
-                      borderRadius: BorderRadius.circular(8),
+                          : AppTheme.gradient1.withAlpha(20),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isCurrentEpisode
                             ? AppTheme.gradient1
-                            : AppTheme.gradient1.withValues(alpha: 0.3),
+                            : AppTheme.gradient1.withAlpha(50),
+                        width: 1.5,
                       ),
                     ),
                     child: Center(
@@ -2007,9 +2101,9 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: isCurrentEpisode
-                              ? AppTheme.whiteGradient
-                              : AppTheme.primaryBlack,
-                          fontSize: 12,
+                              ? Colors.white
+                              : AppTheme.gradient1,
+                          fontSize: 14,
                         ),
                       ),
                     ),
@@ -2085,65 +2179,88 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
     if (_hasError) {
       return Scaffold(
         backgroundColor: AppTheme.primaryBlack,
-        appBar: AppBar(
-          backgroundColor: AppTheme.primaryBlack,
-          title: Text(
-            'Video Player',
-            style: TextStyle(color: AppTheme.gradient1),
-          ),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
-            onPressed: () {
-              _stopAndDisposePlayer();
-              if (mounted) {
-                Navigator.pop(context);
-              }
-            },
-          ),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, color: AppTheme.gradient1, size: 64),
-              SizedBox(height: 16),
-              Text(
-                'Video Error',
-                style: TextStyle(
-                  color: AppTheme.gradient1,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 8),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 32),
-                child: Text(
-                  _errorMessage ?? 'An unknown error occurred',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppTheme.gradient1, fontSize: 16),
-                ),
-              ),
-              SizedBox(height: 24),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.gradient1,
-                  foregroundColor: AppTheme.whiteGradient,
+        body: NestedScrollView(
+          headerSliverBuilder: (context, _) => [
+            SliverAppBar(
+              floating: true,
+              pinned: true,
+              backgroundColor: AppTheme.primaryBlack,
+              elevation: 0,
+              leading: IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(150),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
                 onPressed: () {
-                  setState(() {
-                    _hasError = false;
-                    _errorMessage = null;
-                    _videoReady = false;
-                    _isDisposing = false;
-                  });
-                  ref.invalidate(vidSrcSourcesProvider);
-                  _loadServersAndStream();
+                  _stopAndDisposePlayer();
+                  if (mounted) {
+                    Navigator.pop(context);
+                  }
                 },
-                icon: Icon(Icons.refresh),
-                label: Text('Retry'),
               ),
-            ],
+              title: Text(
+                'Video Player Error',
+                style: TextStyle(
+                  color: AppTheme.whiteGradient,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, color: AppTheme.gradient1, size: 64),
+                SizedBox(height: 16),
+                Text(
+                  'Video Error',
+                  style: TextStyle(
+                    color: AppTheme.gradient1,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    _errorMessage ?? 'An unknown error occurred',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppTheme.gradient1, fontSize: 16),
+                  ),
+                ),
+                SizedBox(height: 24),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.gradient1,
+                    foregroundColor: AppTheme.whiteGradient,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _hasError = false;
+                      _errorMessage = null;
+                      _videoReady = false;
+                      _isDisposing = false;
+                    });
+                    ref.invalidate(vidSrcSourcesProvider);
+                    _loadServersAndStream();
+                  },
+                  icon: Icon(Icons.refresh),
+                  label: Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -2161,33 +2278,78 @@ class _SourcesPageState extends ConsumerState<SourcesPage>
       },
       child: Scaffold(
         backgroundColor: AppTheme.primaryBlack,
-        appBar: AppBar(
-          backgroundColor: AppTheme.primaryBlack,
-          title: Text(
-            _currentPlayingEpisode?.title ?? 'Video Player',
-            style: TextStyle(color: AppTheme.whiteGradient),
-            overflow: TextOverflow.ellipsis,
-          ),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
-            onPressed: () {
-              if (!_isDisposing) {
-                _stopAndDisposePlayer();
-                if (mounted) {
-                  Navigator.pop(context);
-                }
-              }
-            },
-          ),
-          actions: [
-            IconButton(
-              icon: Icon(Icons.info_outline, color: AppTheme.whiteGradient),
-              onPressed: _showEpisodeInfo,
+        body: NestedScrollView(
+          headerSliverBuilder: (context, _) => [
+            SliverAppBar(
+              floating: true,
+              pinned: true,
+              backgroundColor: AppTheme.primaryBlack,
+              elevation: 0,
+              leading: IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(150),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                onPressed: () {
+                  if (!_isDisposing) {
+                    _stopAndDisposePlayer();
+                    if (mounted) {
+                      Navigator.pop(context);
+                    }
+                  }
+                },
+              ),
+              title: Text(
+                _currentPlayingEpisode?.title ?? 'Video Player',
+                style: TextStyle(
+                  color: AppTheme.whiteGradient,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              actions: [
+                IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => DownloadsPage()),
+                    );
+                  },
+                  icon: Icon(
+                    Icons.downloading_rounded,
+                    color: AppTheme.gradient1,
+                  ),
+                ),
+                IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(150),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.info_outline_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  onPressed: _showEpisodeInfo,
+                ),
+                const SizedBox(width: 8),
+              ],
             ),
           ],
-        ),
-        body: SafeArea(
-          child: _isLoadingNewEpisode
+          body: _isLoadingNewEpisode
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,

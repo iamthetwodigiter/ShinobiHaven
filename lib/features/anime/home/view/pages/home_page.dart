@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
@@ -8,6 +10,7 @@ import 'package:shinobihaven/features/anime/home/dependency_injection/home_provi
 import 'package:shinobihaven/core/utils/library_box_functions.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shinobihaven/features/anime/details/view/pages/anime_details_page.dart';
+import 'package:shinobihaven/features/anime/home/model/home.dart';
 import 'package:shinobihaven/features/anime/home/view/widgets/spotlight_card.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -18,6 +21,15 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
+  bool _isScrolling = false;
+  Timer? _scrollTimer;
+
+  @override
+  void dispose() {
+    _scrollTimer?.cancel();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -37,15 +49,28 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Scaffold(
       extendBody: true,
       extendBodyBehindAppBar: true,
-      floatingActionButton: ValueListenableBuilder(
-        valueListenable: Hive.box(
-          'library',
-        ).listenable(keys: ['lastPlayedAnime']),
-        builder: (context, box, child) {
-          final lastPlayedData = LibraryBoxFunction.getLastPlayedAnimeData();
-          if (lastPlayedData == null) return const SizedBox.shrink();
+      body: homePageData.when(
+        loading: () => _buildLoadingState(),
+        error: (err, stack) => _buildErrorState(),
+        data: (data) => _buildMainContent(data, size),
+      ),
+      floatingActionButton: _buildFAB(),
+    );
+  }
 
-          return FloatingActionButton.extended(
+  Widget _buildFAB() {
+    return ValueListenableBuilder(
+      valueListenable: Hive.box(
+        'library',
+      ).listenable(keys: ['lastPlayedAnime']),
+      builder: (context, box, child) {
+        final lastPlayedData = LibraryBoxFunction.getLastPlayedAnimeData();
+        if (lastPlayedData == null) return const SizedBox.shrink();
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 80),
+          child: FloatingActionButton.extended(
+            isExtended: !_isScrolling,
             onPressed: () {
               final anime = lastPlayedData['anime'];
               Navigator.push(
@@ -56,167 +81,164 @@ class _HomePageState extends ConsumerState<HomePage> {
               );
             },
             backgroundColor: AppTheme.gradient1,
-            icon: Icon(Icons.play_arrow, color: AppTheme.whiteGradient),
-            label: Text(
+            extendedIconLabelSpacing: 8,
+            extendedPadding: const EdgeInsets.symmetric(horizontal: 16),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(18)),
+            ),
+            elevation: 8,
+            icon: const Icon(
+              Icons.play_arrow_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
+            label: const Text(
               'Resume Watching',
               style: TextStyle(
-                color: AppTheme.whiteGradient,
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
             ),
-          );
-        },
-      ),
-      appBar: AppBar(
-        backgroundColor: AppTheme.transparentColor,
-        actionsPadding: EdgeInsets.symmetric(horizontal: 25),
-        actions: [
-          InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => SearchPage()),
-              );
-            },
-            child: Container(
-              padding: EdgeInsets.all(5),
-              margin: EdgeInsets.only(left: 10),
-              decoration: BoxDecoration(
-                color: AppTheme.gradient1.withValues(alpha: 0.35),
-                shape: BoxShape.circle,
-                border: Border.all(color: AppTheme.gradient1),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMainContent(HomePageData data, Size size) {
+    return NotificationListener<UserScrollNotification>(
+      onNotification: (notification) {
+        if (notification.direction != ScrollDirection.idle) {
+          _scrollTimer?.cancel();
+          if (!_isScrolling) {
+            setState(() {
+              _isScrolling = true;
+            });
+          }
+        } else if (notification.direction == ScrollDirection.idle) {
+          _scrollTimer?.cancel();
+          _scrollTimer = Timer(const Duration(milliseconds: 900), () {
+            if (_isScrolling && mounted) {
+              setState(() {
+                _isScrolling = false;
+              });
+            }
+          });
+        }
+        return false;
+      },
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 400,
+            floating: false,
+            pinned: true,
+            stretch: true,
+            backgroundColor: Colors.black,
+            flexibleSpace: FlexibleSpaceBar(
+              stretchModes: const [
+                StretchMode.zoomBackground,
+                StretchMode.blurBackground,
+              ],
+              background: SpotlightCard(spotlightAnimes: data.spotlightAnimes),
+            ),
+            actions: [_buildSearchAction()],
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 0, 120),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSection('Trending Now', data.trendingAnimes),
+                  _buildSection('Most Popular', data.mostPopularAnimes),
+                  _buildSection('Fan Favorites', data.mostFavoriteAnimes),
+                  _buildSection('Just Completed', data.latestCompletedAnimes),
+                  _buildSection('New Episodes', data.latestEpisodesAnimes),
+                  _buildSection('Top 10 Globally', data.topTenAnimes),
+                ],
               ),
-              child: Icon(Icons.search_rounded, color: AppTheme.whiteGradient),
             ),
           ),
-          // Expanded(
-          //   child: SwitchListTile.adaptive(
-          //     value: _isAnimeMode,
-          //     enableFeedback: true,
-          //     contentPadding: EdgeInsets.zero,
-          //     activeTrackColor: AppTheme.gradient1,
-          //     inactiveThumbColor: AppTheme.blackGradient,
-          //     onChanged: (val) {
-          //       setState(() {
-          //         _isAnimeMode = val;
-          //       });
-          //     },
-          //     title: Text(
-          //       'Anime Mode',
-          //       style: TextStyle(
-          //         color: AppTheme.whiteGradient,
-          //         fontSize: 18,
-          //         fontWeight: FontWeight.bold,
-          //       ),
-          //     ),
-          //   ),
-          // ),
         ],
       ),
-      body: homePageData.when(
-        loading: () => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Shimmer.fromColors(
-                baseColor: AppTheme.blackGradient,
-                highlightColor: AppTheme.gradient1.withAlpha(77),
-                child: Icon(
-                  Icons.movie,
-                  size: 72,
-                  color: AppTheme.whiteGradient,
-                ),
-              ),
-              SizedBox(height: 18),
-              Shimmer.fromColors(
-                baseColor: AppTheme.blackGradient,
-                highlightColor: AppTheme.gradient1.withAlpha(77),
-                child: Text(
-                  'Loading...',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.whiteGradient,
-                  ),
-                ),
-              ),
-            ],
-          ),
+    );
+  }
+
+  Widget _buildSearchAction() {
+    return Padding(
+      padding: const EdgeInsets.only(right: 16),
+      child: IconButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SearchPage()),
         ),
-        error: (err, stack) => Container(
-          alignment: Alignment.center,
-          padding: EdgeInsets.symmetric(horizontal: 15),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error, color: AppTheme.gradient1, size: 48),
-              SizedBox(height: 16),
-              Text(
-                'Error occured while fetching the data.\nPlease check your internet connection or try again later.',
-                style: TextStyle(
-                  color: AppTheme.gradient1,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 8),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.gradient1,
-                  foregroundColor: AppTheme.whiteGradient,
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: () {
-                  ref.read(homeViewModelProvider.notifier).loadHomePageData();
-                },
-                icon: Icon(Icons.refresh),
-                label: Text(
-                  'Retry',
-                  style: TextStyle(color: AppTheme.whiteGradient),
-                ),
-              ),
-            ],
+        icon: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black.withAlpha(100),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withAlpha(50)),
           ),
+          child: const Icon(Icons.search_rounded, color: Colors.white),
         ),
-        data: (data) => SizedBox(
-          height: size.height,
-          width: size.width,
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.topCenter,
-                  child: SpotlightCard(spotlightAnimes: data.spotlightAnimes),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(left: 15),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _sectionHeader('Trending Animes'),
-                      _animeHorizontalList(data.trendingAnimes),
-                      _sectionHeader('Most Popular Animes'),
-                      _animeHorizontalList(data.mostPopularAnimes),
-                      _sectionHeader('Most Favorite Animes'),
-                      _animeHorizontalList(data.mostFavoriteAnimes),
-                      _sectionHeader('Latest Completed Animes'),
-                      _animeHorizontalList(data.latestCompletedAnimes),
-                      _sectionHeader('Latest Episodes'),
-                      _animeHorizontalList(data.latestEpisodesAnimes),
-                      _sectionHeader('Top 10 Animes'),
-                      _animeHorizontalList(data.topTenAnimes),
-                      SizedBox(height: 15),
-                    ],
-                  ),
-                ),
-              ],
+      ),
+    );
+  }
+
+  Widget _buildSection(String title, List animes) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [_sectionHeader(title), _animeHorizontalList(animes)],
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Shimmer.fromColors(
+        baseColor: AppTheme.whiteGradient,
+        highlightColor: AppTheme.gradient1.withAlpha(77),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.movie_filter_rounded, size: 80, color: Colors.white),
+            SizedBox(height: 20),
+            Text(
+              'ShinobiHaven',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+              ),
             ),
-          ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.cloud_off_rounded,
+            color: Colors.redAccent,
+            size: 64,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Connection Lost',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: () =>
+                ref.read(homeViewModelProvider.notifier).loadHomePageData(),
+            child: const Text('Retry'),
+          ),
+        ],
       ),
     );
   }
@@ -253,10 +275,10 @@ class _HomePageState extends ConsumerState<HomePage> {
         shrinkWrap: true,
         scrollDirection: Axis.horizontal,
         itemCount: animes.length,
-        separatorBuilder: (_, __) => SizedBox(width: 12),
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final anime = animes.elementAt(index);
-          return AnimeCard(anime: anime);
+          return AnimeCard(anime: anime, size: const Size(140, 200));
         },
       ),
     );

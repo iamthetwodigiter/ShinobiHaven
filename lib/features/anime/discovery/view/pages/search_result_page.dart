@@ -161,7 +161,7 @@ class _SearchResultPageState extends ConsumerState<SearchResultPage> {
           widget.query,
           type: selectedFilters['type'],
           status: selectedFilters['status'],
-          rating: selectedFilters['rating'],
+          rating: selectedFilters['rated'],
           score: selectedFilters['score'],
           season: selectedFilters['season'],
           language: selectedFilters['language'],
@@ -192,7 +192,7 @@ class _SearchResultPageState extends ConsumerState<SearchResultPage> {
           return SafeArea(
             child: Container(
               width: size.width,
-              padding: EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               child: SingleChildScrollView(
                 child: Column(
                   children: [
@@ -277,15 +277,7 @@ class _SearchResultPageState extends ConsumerState<SearchResultPage> {
                             right: 0,
                             child: Container(
                               padding: EdgeInsets.all(12).copyWith(bottom: 25),
-                              decoration: BoxDecoration(
-                                color: AppTheme.blackGradient,
-                                borderRadius: BorderRadius.circular(15),
-                                border: Border.all(
-                                  color: AppTheme.gradient1.withValues(
-                                    alpha: 0.25,
-                                  ),
-                                ),
-                              ),
+                              decoration: AppTheme.premiumCard(context),
                               child: Column(
                                 children: [
                                   SingleChildScrollView(

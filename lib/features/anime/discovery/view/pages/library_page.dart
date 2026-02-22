@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/core/utils/library_box_functions.dart';
+import 'package:shinobihaven/core/utils/toast.dart';
 import 'package:shinobihaven/features/anime/common/model/anime.dart';
 import 'package:shinobihaven/features/anime/common/view/pages/profile_page.dart';
 import 'package:shinobihaven/features/anime/common/view/widgets/anime_card.dart';
 import 'package:shinobihaven/features/anime/discovery/view/pages/collection_details_page.dart';
+import 'package:toastification/toastification.dart';
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
@@ -44,7 +46,6 @@ class _LibraryPageState extends State<LibraryPage> {
     _nameController.dispose();
     super.dispose();
   }
-
 
   void _loadLibraryAnimes() {
     _libraryAnimes.clear();
@@ -199,6 +200,13 @@ class _LibraryPageState extends State<LibraryPage> {
                   _loadCollections();
                 });
                 Navigator.pop(context);
+                Toast(
+                  context: context,
+                  title: 'Removed',
+                  description:
+                      '${anime?.title} has been removed from collection',
+                  type: ToastificationType.success,
+                );
               },
               child: Text(
                 'Delete',
@@ -217,235 +225,232 @@ class _LibraryPageState extends State<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Library', style: TextStyle(fontWeight: FontWeight.bold)),
-        actionsPadding: EdgeInsets.only(right: 10),
-        actions: [
-          IconButton(
-            onPressed: () {
-              _addUserList();
-            },
-            icon: Icon(Icons.add),
-          ),
-        ],
-      ),
       body: SafeArea(
         child: ValueListenableBuilder(
           valueListenable: Hive.box('library').listenable(),
           builder: (context, value, child) {
             _loadCollections();
             _loadLibraryAnimes();
-            return SizedBox(
-              width: size.width,
-              height: size.height,
-              child: _libraryAnimes.isEmpty && _collections.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.movie,
-                            size: 64,
-                            color: AppTheme.gradient1,
-                          ),
-                          SizedBox(height: 16),
-                          Text(
-                            'Go watch something first',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.gradient1,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    )
-                  : Column(
+            return CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                _buildSliverAppBar(),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 18),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Recently Watching',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.gradient1,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) {
-                                        return WatchHistory();
-                                      },
-                                    ),
-                                  );
-                                },
-                                style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                ),
-                                child: Text(
-                                  'View All',
-                                  style: TextStyle(color: AppTheme.gradient1),
-                                ),
-                              ),
-                            ],
+                        _buildSectionHeader(
+                          'Recently Watching',
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => WatchHistory()),
                           ),
                         ),
-                        SizedBox(height: 15),
-                        SizedBox(
-                          height: 235,
-                          child: _libraryAnimes.isEmpty
-                              ? Center(
-                                  child: Text(
-                                    'Go watch something first',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.gradient1,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                )
-                              : ListView.separated(
-                                  scrollDirection: Axis.horizontal,
-                                  padding: EdgeInsets.symmetric(horizontal: 10),
-                                  itemCount: _libraryAnimes.length,
-                                  separatorBuilder: (_, __) => SizedBox(),
-                                  itemBuilder: (context, index) {
-                                    final anime = _libraryAnimes[index];
-                                    return SizedBox(
-                                      height: 250,
-                                      width: 175,
-                                      child: AnimeCard(
-                                        anime: anime,
-                                        showAdditionalInfo: false,
-                                      ),
-                                    );
-                                  },
-                                ),
-                        ),
-                        SizedBox(height: 10),
-                        if (_collections.isNotEmpty)
-                          Padding(
-                            padding: EdgeInsets.only(top: 8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 18),
-                                  child: Text(
-                                    'Collections',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.gradient1,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                if (_collections.isEmpty)
-                                  Center(
-                                    child: Text(
-                                      'Go watch something first',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.gradient1,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                ..._collections.entries.map((entry) {
-                                  final title = entry.key;
-                                  final animes = entry.value;
-                                  return Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                    ),
-                                    child: ListTile(
-                                      contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                      ),
-                                      leading: Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          color: AppTheme.gradient1.withAlpha(
-                                            30,
-                                          ),
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            (title.isNotEmpty
-                                                ? title[0].toUpperCase()
-                                                : ''),
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      title: Text(
-                                        title,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      subtitle: Text(
-                                        '${animes.length} item${animes.length == 1 ? '' : 's'}',
-                                        style: TextStyle(
-                                          color: AppTheme.gradient1.withAlpha(
-                                            150,
-                                          ),
-                                        ),
-                                      ),
-                                      trailing: IconButton(
-                                        onPressed: () {
-                                          _popUpDeleteConfirmation(title);
-                                        },
-                                        icon: Icon(
-                                          Icons.delete,
-                                          color: AppTheme.gradient1,
-                                        ),
-                                      ),
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                                CollectionDetailsPage(
-                                                  title: title,
-                                                  animes: animes,
-                                                ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  );
-                                }),
-                              ],
-                            ),
-                          ),
+                        const SizedBox(height: 15),
+                        _buildRecentList(),
+                        const SizedBox(height: 10),
+                        _buildSectionHeader('My Collections', _addUserList),
+                        const SizedBox(height: 15),
+                        _buildCollectionsGrid(),
+                        const SizedBox(height: 100),
                       ],
                     ),
+                  ),
+                ),
+              ],
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      expandedHeight: 120,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      flexibleSpace: FlexibleSpaceBar(
+        titlePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        title: const Text(
+          'LIBRARY',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+            fontSize: 24,
+          ),
+        ),
+      ),
+      actions: [
+        IconButton(
+          onPressed: _addUserList,
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.gradient1.withAlpha(40),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.add_rounded, color: AppTheme.gradient1),
+          ),
+        ),
+        const SizedBox(width: 10),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title, VoidCallback onTap) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.5,
+          ),
+        ),
+        TextButton(
+          onPressed: onTap,
+          child: Text(
+            'View All',
+            style: TextStyle(
+              color: AppTheme.gradient1,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecentList() {
+    if (_libraryAnimes.isEmpty) {
+      return _buildEmptyPlaceholder('No recent history.');
+    }
+    return SizedBox(
+      height: 220,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: _libraryAnimes.length,
+        itemBuilder: (context, index) => Padding(
+          padding: const EdgeInsets.only(right: 15),
+          child: AnimeCard(
+            anime: _libraryAnimes[index],
+            size: const Size(120, 200),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCollectionsGrid() {
+    if (_collections.isEmpty) {
+      return _buildEmptyPlaceholder('Create your first collection!');
+    }
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 1.4,
+        crossAxisSpacing: 15,
+        mainAxisSpacing: 15,
+      ),
+      itemCount: _collections.length,
+      itemBuilder: (context, index) {
+        final entry = _collections.entries.elementAt(index);
+        return _buildCollectionCard(entry.key, entry.value);
+      },
+    );
+  }
+
+  Widget _buildCollectionCard(String title, List<Anime> animes) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CollectionDetailsPage(title: title, animes: animes),
+        ),
+      ),
+      onLongPress: () => _popUpDeleteConfirmation(title),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.gradient1.withAlpha(20),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.gradient1.withAlpha(40)),
+          image: animes.isNotEmpty
+              ? DecorationImage(
+                  image: NetworkImage(animes.first.image),
+                  fit: BoxFit.cover,
+                  opacity: 0.2,
+                )
+              : null,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${animes.length} Items',
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyPlaceholder(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      decoration: BoxDecoration(
+        color: AppTheme.gradient1.withAlpha(10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.gradient1.withAlpha(20),
+          style: BorderStyle.none,
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.movie_filter_rounded,
+            color: AppTheme.gradient1.withAlpha(100),
+            size: 48,
+          ),
+          const SizedBox(height: 15),
+          Text(
+            message,
+            style: TextStyle(
+              color: Colors.grey[500],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

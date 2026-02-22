@@ -17,6 +17,19 @@ class DownloadedSubtitle {
       localPath: localPath ?? this.localPath,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'language': language,
+    'url': url,
+    'localPath': localPath,
+  };
+
+  factory DownloadedSubtitle.fromJson(Map<String, dynamic> json) =>
+      DownloadedSubtitle(
+        language: json['language'],
+        url: json['url'],
+        localPath: json['localPath'],
+      );
 }
 
 class DownloadTask {
@@ -98,4 +111,46 @@ class DownloadTask {
     final fileExt = url.toLowerCase().contains('.m3u8') ? 'ts' : ext;
     return '${animeSlug}_EP${episodeNumber}_$safeTitle.$fileExt';
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'animeSlug': animeSlug,
+    'animeTitle': animeTitle,
+    'episodeId': episodeId,
+    'episodeNumber': episodeNumber,
+    'title': title,
+    'serverId': serverId,
+    'url': url,
+    'posterUrl': posterUrl,
+    'filePath': filePath,
+    'progress': progress,
+    'bytesReceived': bytesReceived,
+    'totalBytes': totalBytes,
+    'speedBytesPerSec': speedBytesPerSec,
+    'subtitles': subtitles.map((s) => s.toJson()).toList(),
+    'status': status.index,
+    'error': error,
+  };
+
+  factory DownloadTask.fromJson(Map<String, dynamic> json) => DownloadTask(
+    id: json['id'],
+    animeSlug: json['animeSlug'],
+    animeTitle: json['animeTitle'],
+    episodeId: json['episodeId'],
+    episodeNumber: json['episodeNumber'],
+    title: json['title'],
+    serverId: json['serverId'],
+    url: json['url'],
+    posterUrl: json['posterUrl'],
+    filePath: json['filePath'],
+    progress: (json['progress'] ?? 0.0).toDouble(),
+    bytesReceived: json['bytesReceived'] ?? 0,
+    totalBytes: json['totalBytes'],
+    speedBytesPerSec: (json['speedBytesPerSec'] ?? 0.0).toDouble(),
+    subtitles: (json['subtitles'] as List)
+        .map((s) => DownloadedSubtitle.fromJson(s))
+        .toList(),
+    status: DownloadStatus.values[json['status'] ?? 0],
+    error: json['error'],
+  );
 }

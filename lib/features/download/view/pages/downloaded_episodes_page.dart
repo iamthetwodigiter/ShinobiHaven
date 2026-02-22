@@ -38,7 +38,7 @@ class DownloadedEpisodesPage extends StatelessWidget {
       body: ListView.separated(
         padding: EdgeInsets.all(12),
         itemCount: sorted.length,
-        separatorBuilder: (_, __) => SizedBox(height: 8),
+        separatorBuilder: (_, _) => SizedBox(height: 8),
         itemBuilder: (context, i) {
           final e = sorted[i];
           final filePath = e['filePath'] as String;

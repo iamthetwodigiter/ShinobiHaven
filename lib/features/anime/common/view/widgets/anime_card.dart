@@ -21,6 +21,9 @@ class AnimeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Determine responsive width
+    final double cardWidth = size?.width ?? (showAdditionalInfo ? 150 : 130);
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -36,118 +39,92 @@ class AnimeCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            height: size?.height ?? 200,
-            width: size?.width ?? 150,
-            margin: EdgeInsets.only(right: 10),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(15),
-              child: CachedNetworkImage(
-                imageUrl: anime.image,
-                fit: BoxFit.cover,
-                memCacheHeight: 400,
-                placeholder: (context, url) {
-                  return Center(child: CircularProgressIndicator.adaptive());
-                },
-                errorWidget: (context, url, error) {
-                  return Column(
-                    spacing: 8,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error, color: AppTheme.gradient1),
-                      Text(
-                        'Image not found',
-                        style: TextStyle(fontWeight: FontWeight.w400),
-                      ),
-                    ],
-                  );
-                },
+            width: cardWidth,
+            margin: size == null
+                ? EdgeInsets.zero
+                : const EdgeInsets.only(right: 10),
+            child: AspectRatio(
+              aspectRatio: 0.7,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: CachedNetworkImage(
+                  imageUrl: anime.image,
+                  fit: BoxFit.cover,
+                  memCacheHeight: 400,
+                  placeholder: (context, url) {
+                    return const Center(
+                      child: CircularProgressIndicator.adaptive(),
+                    );
+                  },
+                  errorWidget: (context, url, error) {
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error, color: AppTheme.gradient1),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Image not found',
+                          style: TextStyle(fontWeight: FontWeight.w400),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
-          SizedBox(height: 5),
-          SizedBox(
-            width: size?.width ?? 150,
-            child: Text(
-              anime.title,
-              style:
-                  textStyle ??
-                  TextStyle(
-                    // color: AppTheme.whiteGradient,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-              maxLines: twoLineTitle ? 2 : 1,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: SizedBox(
+              width: cardWidth,
+              child: Text(
+                anime.title,
+                style:
+                    textStyle ??
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                maxLines: twoLineTitle ? 2 : 1,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
-          SizedBox(height: 5),
+          const SizedBox(height: 4),
           if (showAdditionalInfo)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              spacing: 10,
-              children: [
-                if (anime.dubCount != null)
-                  Row(
-                    children: [
-                      Icon(Icons.mic, size: 10),
-                      Text(
-                        anime.dubCount ?? '',
-                        style: TextStyle(
-                          // color: AppTheme.whiteGradient,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                if (anime.subCount != null)
-                  Row(
-                    children: [
-                      Icon(Icons.closed_caption, size: 10),
-                      Text(
-                        anime.subCount ?? '',
-                        style: TextStyle(
-                          // color: AppTheme.whiteGradient,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                if (anime.type != null)
-                  Row(
-                    children: [
-                      Icon(Icons.play_circle, size: 10),
-                      Text(
-                        anime.type ?? '',
-                        style: TextStyle(
-                          // color: AppTheme.whiteGradient,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                if (anime.duration != null)
-                  Row(
-                    children: [
-                      Icon(Icons.timelapse_rounded, size: 10),
-                      Text(
-                        anime.duration ?? '',
-                        style: TextStyle(
-                          // color: AppTheme.whiteGradient,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5),
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  if (anime.dubCount != null)
+                    _badge(Icons.mic, anime.dubCount!),
+                  if (anime.subCount != null)
+                    _badge(Icons.closed_caption, anime.subCount!),
+                  if (anime.type != null)
+                    _badge(Icons.play_circle, anime.type!),
+                  if (anime.duration != null)
+                    _badge(Icons.timelapse_rounded, anime.duration!),
+                ],
+              ),
             ),
         ],
       ),
+    );
+  }
+
+  Widget _badge(IconData icon, String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 10, color: AppTheme.gradient1),
+        const SizedBox(width: 2),
+        Text(
+          text,
+          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+        ),
+      ],
     );
   }
 }

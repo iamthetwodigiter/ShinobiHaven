@@ -1,203 +1,171 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
-import 'package:shinobihaven/features/download/repository/downloads_repository.dart';
 import 'package:path/path.dart' as p;
 import 'package:shinobihaven/features/download/view/widgets/ongoing_downloads.dart';
 import 'downloaded_episodes_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shinobihaven/features/download/dependency_injection/downloads_provider.dart';
 
-class DownloadsPage extends StatefulWidget {
+class DownloadsPage extends ConsumerStatefulWidget {
   const DownloadsPage({super.key});
   @override
-  State<DownloadsPage> createState() => _DownloadsPageState();
+  ConsumerState<DownloadsPage> createState() => _DownloadsPageState();
 }
 
-class _DownloadsPageState extends State<DownloadsPage> {
-  late final DownloadsRepository _repo;
-
-  List<Map<String, dynamic>> _completedList = [];
-  bool _loadingCompleted = true;
-
-  Set<String> _lastActiveIds = {};
-
+class _DownloadsPageState extends ConsumerState<DownloadsPage> {
   @override
   void initState() {
     super.initState();
-    _repo = DownloadsRepository();
-    _lastActiveIds = _repo.activeDownloads.value
-        .map((d) => d['id'] as String?)
-        .whereType<String>()
-        .toSet();
-    _loadCompleted();
-    _repo.activeDownloads.addListener(_onActiveChanged);
-  }
-
-  void _onActiveChanged() {
-    if (!mounted) return;
-
-    final newIds = _repo.activeDownloads.value
-        .map((d) => d['id'] as String?)
-        .whereType<String>()
-        .toSet();
-
-    if (!setEquals(_lastActiveIds, newIds)) {
-      _lastActiveIds = newIds;
-      _loadCompleted();
-    }
-  }
-
-  @override
-  void dispose() {
-    _repo.activeDownloads.removeListener(_onActiveChanged);
-    super.dispose();
-  }
-
-  Future<void> _loadCompleted() async {
-    setState(() {
-      _loadingCompleted = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(downloadsViewModelProvider.notifier).loadCompletedDownloads();
     });
-    try {
-      final list = await _repo.loadDownloadsIndex();
-      if (!mounted) return;
-      setState(() {
-        _completedList = list;
-        _loadingCompleted = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _completedList = [];
-        _loadingCompleted = false;
-      });
-    }
   }
 
   Future<void> _refresh() async {
-    await _loadCompleted();
+    await ref
+        .read(downloadsViewModelProvider.notifier)
+        .loadCompletedDownloads();
   }
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(downloadsViewModelProvider);
+    final ongoingTasks = state.ongoingTasks;
+    final completedList = state.completedTasks;
+    final isLoading = state.isLoadingCompleted;
+
     return Scaffold(
-      backgroundColor: AppTheme.primaryBlack,
-      appBar: AppBar(
-        backgroundColor: AppTheme.primaryBlack,
-        title: Text('Downloads', style: TextStyle(color: AppTheme.gradient1)),
-      ),
-      body: _loadingCompleted
+      extendBodyBehindAppBar: true,
+      body: isLoading && completedList.isEmpty
           ? Center(child: CircularProgressIndicator(color: AppTheme.gradient1))
-          : Column(
-              children: [
-                Padding(
-                  padding: EdgeInsets.all(12),
-                  child: ValueListenableBuilder<List<Map<String, dynamic>>>(
-                    valueListenable: _repo.activeDownloads,
-                    builder: (context, ongoing, _) {
-                      if (ongoing.isEmpty) return SizedBox.shrink();
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Ongoing downloads',
-                            style: TextStyle(
-                              color: AppTheme.gradient1,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          ...ongoing.map((d) {
-                            final prog = (d['progress'] as int?) ?? 0;
-                            final received = d['received'] as int? ?? 0;
-                            final total = d['total'] as int?;
-                            final speed = (d['speed'] as double?) ?? 0.0;
-                            final etaSec = (d['eta'] as double?)?.toInt();
-                            final displayedSpeedBytesPerSec = (speed * 8)
-                                .toInt();
-                            return OngoingDownloads(
-                              animeTitle: d['animeTitle'],
-                              episodeNumber: d['episodeNumber'],
-                              progress: prog,
-                              received: received,
-                              total: total,
-                              speed: speed,
-                              displayedSpeedBytesPerSec:
-                                  displayedSpeedBytesPerSec,
-                              etaSec: etaSec,
-                            );
-                          }),
-                        ],
-                      );
-                    },
+          : RefreshIndicator(
+              onRefresh: _refresh,
+              child: CustomScrollView(
+                slivers: [
+                  SliverAppBar(
+                    expandedHeight: 120,
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    flexibleSpace: FlexibleSpaceBar(
+                      titlePadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 15,
+                      ),
+                      title: const Text(
+                        'DOWNLOADS',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                          fontSize: 24,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _refresh,
-                    child: _completedList.isEmpty
-                        ? Center(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 32),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.download,
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: ongoingTasks.isEmpty
+                          ? const SizedBox.shrink()
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Ongoing downloads',
+                                  style: TextStyle(
                                     color: AppTheme.gradient1,
-                                    size: 84,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
                                   ),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    'No downloads yet',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.gradient1,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  Text(
-                                    'Tap the download icon on any episodes to add it to your downloads',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(height: 12),
+                                ...ongoingTasks.map((task) {
+                                  final eta =
+                                      task.totalBytes != null &&
+                                          task.speedBytesPerSec > 0
+                                      ? ((task.totalBytes! -
+                                                    task.bytesReceived) /
+                                                task.speedBytesPerSec)
+                                            .toInt()
+                                      : null;
+                                  return OngoingDownloads(
+                                    taskId: task.id,
+                                    animeTitle: task.animeTitle,
+                                    episodeNumber: task.episodeNumber,
+                                    progress: (task.progress * 100).toInt(),
+                                    received: task.bytesReceived,
+                                    total: task.totalBytes,
+                                    speed: task.speedBytesPerSec,
+                                    displayedSpeedBytesPerSec: task
+                                        .speedBytesPerSec
+                                        .toInt(),
+                                    etaSec: eta,
+                                    status: task.status,
+                                    error: task.error,
+                                    onCancel: () {
+                                      ref
+                                          .read(
+                                            downloadsViewModelProvider.notifier,
+                                          )
+                                          .cancelDownload(task.id);
+                                    },
+                                  );
+                                }),
+                              ],
                             ),
-                          )
-                        : _buildGroupsList(
-                            _completedList.where((e) {
-                              final ongoingPaths = _lastActiveIds.isEmpty
-                                  ? <String>{}
-                                  : _repo.activeDownloads.value
-                                        .map((d) => d['filePath'] as String?)
-                                        .whereType<String>()
-                                        .toSet();
-                              final fp = e['filePath'] as String?;
-                              if (fp != null && ongoingPaths.contains(fp)) {
-                                return false;
-                              }
-                              final key =
-                                  '${e['animeTitle'] ?? ''}|${e['episodeNumber'] ?? ''}|${e['title'] ?? ''}';
-                              final ongoingKeys = _repo.activeDownloads.value
-                                  .map(
-                                    (d) =>
-                                        '${d['animeTitle'] ?? ''}|${d['episodeNumber'] ?? ''}|${d['title'] ?? ''}',
-                                  )
-                                  .toSet();
-                              if (ongoingKeys.contains(key)) return false;
-                              return true;
-                            }).toList(),
-                          ),
+                    ),
                   ),
-                ),
-              ],
+                  completedList.isEmpty && ongoingTasks.isEmpty
+                      ? SliverFillRemaining(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.download,
+                                  color: AppTheme.gradient1,
+                                  size: 84,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No downloads yet',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.gradient1,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const Text(
+                                  'Tap the download icon on any episodes to add it to your downloads',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : _buildGroupsList(
+                          completedList.where((e) {
+                            // Filter out tasks that are still active (Ongoing)
+                            final key =
+                                '${e['animeTitle'] ?? ''}|${e['episodeNumber'] ?? ''}|${e['title'] ?? ''}';
+                            final ongoingKeys = ongoingTasks
+                                .map(
+                                  (d) =>
+                                      '${d.animeTitle}|${d.episodeNumber}|${d.title}',
+                                )
+                                .toSet();
+                            if (ongoingKeys.contains(key)) return false;
+                            return true;
+                          }).toList(),
+                        ),
+                ],
+              ),
             ),
     );
   }
@@ -214,12 +182,11 @@ class _DownloadsPageState extends State<DownloadsPage> {
     final groups = grouped.entries.toList()
       ..sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase()));
 
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: ListView.separated(
-        padding: EdgeInsets.all(12),
+    return SliverPadding(
+      padding: const EdgeInsets.all(12),
+      sliver: SliverList.separated(
         itemCount: groups.length,
-        separatorBuilder: (_, __) => SizedBox(height: 8),
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
           final animeTitle = groups[index].key;
           final episodes = groups[index].value;
@@ -243,7 +210,7 @@ class _DownloadsPageState extends State<DownloadsPage> {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: AppTheme.gradient1.withValues(alpha: 0.12),
+                      color: AppTheme.gradient1.withAlpha(30),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(
@@ -252,16 +219,14 @@ class _DownloadsPageState extends State<DownloadsPage> {
                   ),
             title: Text(
               animeTitle,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppTheme.whiteGradient,
                 fontWeight: FontWeight.bold,
               ),
             ),
             subtitle: Text(
               '${episodes.length} episode${episodes.length == 1 ? '' : 's'} downloaded',
-              style: TextStyle(
-                color: AppTheme.whiteGradient.withValues(alpha: 0.7),
-              ),
+              style: TextStyle(color: AppTheme.whiteGradient.withAlpha(180)),
             ),
             trailing: Icon(Icons.chevron_right, color: AppTheme.gradient1),
             onTap: () {

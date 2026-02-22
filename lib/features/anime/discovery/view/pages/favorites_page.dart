@@ -23,25 +23,17 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       builder: (context) {
         return AlertDialog.adaptive(
           title: Text(
-            "Are you sure you want to remove '${anime.title}' from Favorites?",
-            style: TextStyle(fontSize: 18),
+            "Remove '${anime.title}' from Favorites?",
+            style: const TextStyle(fontSize: 18),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: AppTheme.gradient1,
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             TextButton(
               style: TextButton.styleFrom(
                 backgroundColor: AppTheme.gradient1,
-                padding: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -50,17 +42,16 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                 FavoritesBoxFunctions.addToFavorites(anime);
                 Toast(
                   context: context,
-                  title: 'All Right...',
-                  description: '${anime.title} has been removed from Favorites',
+                  title: 'Removed',
+                  description: '${anime.title} has been removed from favorites',
                   type: ToastificationType.success,
                 );
                 Navigator.pop(context);
               },
-              child: Text(
+              child: const Text(
                 'Yes',
                 style: TextStyle(
-                  color: AppTheme.whiteGradient,
-                  fontSize: 15,
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -76,183 +67,202 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
     final size = MediaQuery.sizeOf(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Favorites', style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            onPressed: () => setState(() {}),
-            icon: Icon(Icons.refresh),
-          ),
-        ],
-      ),
+      extendBodyBehindAppBar: true,
+
       body: ValueListenableBuilder(
         valueListenable: Hive.box('favorites').listenable(),
-        builder: (context, _, __) {
+        builder: (context, _, _) {
           final List<Anime> animes = FavoritesBoxFunctions.listFavorites();
 
           if (animes.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 32),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Icon(Icons.favorite, color: AppTheme.gradient1, size: 84),
-                    SizedBox(height: 16),
-                    Text(
-                      'No favorites added yet.',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.gradient1,
+            return RefreshIndicator(
+              onRefresh: () async => setState(() {}),
+              child: CustomScrollView(
+                slivers: [
+                  SliverAppBar(
+                    expandedHeight: 120,
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    flexibleSpace: FlexibleSpaceBar(
+                      titlePadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 15,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    Text(
-                      'Tap the heart icon on any anime details to add it to your favorites',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                      title: const Text(
+                        'FAVORITES',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                          fontSize: 24,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                  ],
-                ),
+                  ),
+                  SliverFillRemaining(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.favorite_border_rounded,
+                              color: AppTheme.gradient1,
+                              size: 84,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Your favorites is empty',
+                              style: TextStyle(
+                                color: AppTheme.gradient1,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Start adding your favorite anime to see them here!',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             );
           }
 
           return RefreshIndicator(
             onRefresh: () async => setState(() {}),
-            child: ListView.builder(
-              itemCount: animes.length,
-              itemBuilder: (context, index) {
-                final anime = animes[index];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => AnimeDetailsPage(animeSlug: anime.slug),
+            child: CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  expandedHeight: 120,
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  flexibleSpace: FlexibleSpaceBar(
+                    titlePadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 15,
+                    ),
+                    title: const Text(
+                      'FAVORITES',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                        fontSize: 24,
                       ),
-                    );
-                  },
-                  child: Container(
-                    height: 100,
-                    width: size.width,
-                    margin: EdgeInsets.symmetric(horizontal: 15),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 15,
-                      vertical: 5,
-                    ).copyWith(right: 0),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: CachedNetworkImage(imageUrl: anime.image),
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              Text(
-                                anime.title,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                spacing: 10,
-                                children: [
-                                  if (anime.dubCount != null)
-                                    Row(
-                                      children: [
-                                        Icon(Icons.mic, size: 12),
-                                        Text(
-                                          anime.dubCount ?? '',
-                                          style: TextStyle(
-                                            // color: AppTheme.whiteGradient,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  if (anime.subCount != null)
-                                    Row(
-                                      children: [
-                                        Icon(Icons.closed_caption, size: 12),
-                                        Text(
-                                          anime.subCount ?? '',
-                                          style: TextStyle(
-                                            // color: AppTheme.whiteGradient,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  if (anime.type != null)
-                                    Row(
-                                      children: [
-                                        Icon(Icons.play_circle, size: 12),
-                                        Text(
-                                          anime.type ?? '',
-                                          style: TextStyle(
-                                            // color: AppTheme.whiteGradient,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-
-                                  if (anime.duration != null)
-                                    Row(
-                                      children: [
-                                        Icon(Icons.timelapse_rounded, size: 12),
-                                        Text(
-                                          anime.duration ?? '',
-                                          style: TextStyle(
-                                            // color: AppTheme.whiteGradient,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          onPressed: () {
-                            _popUpDeleteConfirmation(anime);
-                          },
-                          icon: Icon(
-                            Icons.delete_rounded,
-                            size: 20,
-                            color: AppTheme.gradient1,
-                          ),
-                        ),
-                      ],
                     ),
                   ),
-                );
-              },
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(15, 12, 15, 20),
+                  sliver: SliverList.separated(
+                    itemCount: animes.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final anime = animes[index];
+                      return _buildFavoriteItem(anime, size);
+                    },
+                  ),
+                ),
+              ],
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildFavoriteItem(Anime anime, Size size) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AnimeDetailsPage(animeSlug: anime.slug),
+          ),
+        );
+      },
+      child: Container(
+        height: 100,
+        decoration: BoxDecoration(
+          color: AppTheme.cardColor(context).withAlpha(180),
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: AppTheme.premiumShadow,
+          border: Border.all(color: AppTheme.gradient1.withAlpha(30)),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(15),
+              child: CachedNetworkImage(
+                imageUrl: anime.image,
+                width: 70,
+                height: 100,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    anime.title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 12,
+                    children: [
+                      if (anime.type != null)
+                        _badgeItem(Icons.play_circle_outline, anime.type!),
+                      if (anime.duration != null)
+                        _badgeItem(Icons.timer_outlined, anime.duration!),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: () => _popUpDeleteConfirmation(anime),
+              icon: Icon(
+                Icons.delete_outline_rounded,
+                color: AppTheme.gradient1,
+                size: 22,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _badgeItem(IconData icon, String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: AppTheme.gradient1),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        ),
+      ],
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:shinobihaven/features/anime/episodes/model/servers.dart';
 import 'package:shinobihaven/features/anime/episodes/repository/servers_repository.dart';
 import 'package:shinobihaven/features/anime/episodes/viewmodel/servers_viewmodel.dart';

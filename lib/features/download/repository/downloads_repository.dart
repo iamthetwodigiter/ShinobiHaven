@@ -10,6 +10,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shinobihaven/core/constants/app_details.dart';
 import 'package:shinobihaven/features/download/model/download_task.dart';
 import 'package:ffmpeg_kit_flutter_new_https/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new_https/ffmpeg_kit_config.dart';
 import 'package:ffmpeg_kit_flutter_new_https/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_https/return_code.dart';
 import 'package:shinobihaven/core/services/notification_service.dart';
@@ -35,13 +36,30 @@ class DownloadsRepository {
   final Dio _dio = Dio();
 
   final Map<String, Map<String, dynamic>> _activeDownloads = {};
+  final Map<String, CancelToken> _cancelTokens = {};
+  final Map<String, bool> _cancelledTasks = {};
   final ValueNotifier<List<Map<String, dynamic>>> activeDownloads =
       ValueNotifier<List<Map<String, dynamic>>>([]);
+  final Set<String> _ongoingPaths = {};
 
-  DownloadsRepository._internal();
+  void addOngoingPath(String path) => _ongoingPaths.add(path);
+  void removeOngoingPath(String path) => _ongoingPaths.remove(path);
+
+  DownloadsRepository._internal() {
+    try {
+      FFmpegKitConfig.init();
+    } catch (_) {}
+  }
   factory DownloadsRepository() {
     _instance ??= DownloadsRepository._internal();
     return _instance!;
+  }
+
+  void cancelDownload(String id) {
+    _cancelledTasks[id] = true;
+    _cancelTokens[id]?.cancel('Cancelled by user');
+    _activeDownloads.remove(id);
+    _emitActive();
   }
 
   void _emitActive() =>
@@ -53,28 +71,65 @@ class DownloadsRepository {
       if (!dir.existsSync()) dir.createSync(recursive: true);
       return dir.path;
     }
-    final appDoc = await getApplicationDocumentsDirectory();
-    final dir = Directory(p.join(appDoc.path, 'Downloads'));
+    final appDoc = AppDetails.appDownloadsDirectory;
+    final dir = Directory(p.join(appDoc, 'Downloads'));
     if (!dir.existsSync()) dir.createSync(recursive: true);
     return dir.path;
   }
 
   Future<bool> ensureStoragePermission() async {
     if (Platform.isAndroid) {
-      final st = await Permission.storage.request();
-      final ex = await Permission.manageExternalStorage.request();
-      if ((st.isDenied || st.isPermanentlyDenied) &&
-          (ex.isDenied || ex.isPermanentlyDenied)) {
-        return false;
+      try {
+        // First check if already granted
+        if (await Permission.storage.isGranted ||
+            await Permission.manageExternalStorage.isGranted) {
+          return true;
+        }
+
+        // Try to request, will fail if in background
+        final st = await Permission.storage.request();
+        final ex = await Permission.manageExternalStorage.request();
+
+        return st.isGranted || ex.isGranted;
+      } catch (e) {
+        debugPrint('ensureStoragePermission error: $e');
+        // If request fails (e.g. background service), we fall back to checking status only
+        return await Permission.storage.isGranted ||
+            await Permission.manageExternalStorage.isGranted;
       }
-      return true;
     }
     return true;
   }
 
-  String _sanitizeFileName(String input) {
+  String sanitizeFileName(String input) {
     final sanitized = input.replaceAll(RegExp(r'[\/\\\:\*\?"<>\|]'), '').trim();
     return sanitized.replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  Future<String> getTaskSavePath(DownloadTask task) async {
+    final dirPath = await _getDownloadDirectoryPath();
+    final animeFolderName = sanitizeFileName(
+      task.animeTitle.isNotEmpty ? task.animeTitle : 'Unknown Anime',
+    );
+    final animeDir = Directory(p.join(dirPath, animeFolderName));
+    if (!animeDir.existsSync()) animeDir.createSync(recursive: true);
+
+    final safeBase = sanitizeFileName('${task.episodeNumber}_${task.title}');
+
+    String outExt;
+    if (task.url.toLowerCase().contains('.m3u8')) {
+      outExt = '.mp4';
+    } else {
+      try {
+        final urlPath = Uri.parse(task.url).path;
+        final ext = p.extension(urlPath);
+        outExt = ext.isNotEmpty ? ext : '.mp4';
+      } catch (_) {
+        outExt = '.mp4';
+      }
+    }
+
+    return p.join(animeDir.path, '$safeBase$outExt');
   }
 
   Future<void> downloadFile({
@@ -84,383 +139,398 @@ class DownloadsRepository {
     required void Function(String error) onError,
     required SubtitleSavedCallback onSubtitleSaved,
   }) async {
-    final id = DateTime.now().millisecondsSinceEpoch.toString();
-
-    final int progressNotificationId =
-        NotificationIds.episodeDownload + (id.hashCode & 0x3FF);
-    final int completeNotificationId =
-        NotificationIds.episodeComplete + ((id.hashCode >> 1) & 0x3FF);
-    final int failedNotificationId =
-        NotificationIds.episodeFailed + ((id.hashCode >> 2) & 0x3FF);
-
-    _activeDownloads[id] = {
-      'id': id,
-      'animeTitle': task.animeTitle,
-      'episodeNumber': task.episodeNumber,
-      'title': task.title,
-      'progress': 0,
-      'received': 0,
-      'total': null,
-      'speed': 0.0,
-      'eta': null,
-      'filePath': null,
-      'status': 'running',
-      'notificationId': progressNotificationId,
-    };
-    _emitActive();
-
     try {
-      await NotificationServiceExtensions.showDownloadStarted(
-        id: progressNotificationId,
-        itemName: '${task.animeTitle} • Ep ${task.episodeNumber} ${task.title}',
-        channel: NotificationChannel.downloads,
-      );
-    } catch (_) {}
+      final id = DateTime.now().millisecondsSinceEpoch.toString();
 
-    try {
-      final hasPerm = await ensureStoragePermission();
-      if (!hasPerm) {
-        _activeDownloads[id]?['status'] = 'failed';
+      final int progressNotificationId =
+          NotificationIds.episodeDownload + (id.hashCode & 0x3FF);
+      final int completeNotificationId =
+          NotificationIds.episodeComplete + ((id.hashCode >> 1) & 0x3FF);
+      final int failedNotificationId =
+          NotificationIds.episodeFailed + ((id.hashCode >> 2) & 0x3FF);
+
+      _activeDownloads[id] = {
+        'id': id,
+        'animeTitle': task.animeTitle,
+        'episodeNumber': task.episodeNumber,
+        'title': task.title,
+        'progress': 0,
+        'received': 0,
+        'total': null,
+        'speed': 0.0,
+        'eta': null,
+        'filePath': null,
+        'status': 'running',
+        'notificationId': progressNotificationId,
+      };
+      _emitActive();
+
+      final cancelToken = CancelToken();
+      _cancelTokens[id] = cancelToken;
+      _cancelledTasks[id] = false;
+
+      try {
+        await NotificationServiceExtensions.showDownloadStarted(
+          id: progressNotificationId,
+          itemName:
+              '${task.animeTitle} • Ep ${task.episodeNumber} ${task.title}',
+          channel: NotificationChannel.downloads,
+        );
+      } catch (_) {}
+
+      try {
+        final hasPerm = await ensureStoragePermission();
+        if (!hasPerm) {
+          _activeDownloads[id]?['status'] = 'failed';
+          _emitActive();
+          try {
+            await NotificationServiceExtensions.showDownloadFailed(
+              id: failedNotificationId,
+              itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
+              channel: NotificationChannel.downloads,
+              error: 'Storage permission denied',
+              progressNotificationId: progressNotificationId,
+            );
+          } catch (_) {}
+          onError('Storage permission denied');
+          return;
+        }
+
+        final dirPath = await _getDownloadDirectoryPath();
+        final animeFolderName = sanitizeFileName(
+          task.animeTitle.isNotEmpty ? task.animeTitle : 'Unknown Anime',
+        );
+        final animeDir = Directory(p.join(dirPath, animeFolderName));
+        if (!animeDir.existsSync()) animeDir.createSync(recursive: true);
+
+        String? posterPath;
+        try {
+          final posterUrl = (task as dynamic).posterUrl != null
+              ? (task as dynamic).posterUrl as String?
+              : null;
+          if (posterUrl != null && posterUrl.isNotEmpty) {
+            final resp = await _dio.get<List<int>>(
+              posterUrl,
+              options: Options(
+                responseType: ResponseType.bytes,
+                followRedirects: true,
+              ),
+              cancelToken: cancelToken,
+            );
+            if (resp.data != null) {
+              final ct = resp.headers.value('content-type') ?? '';
+              String ext = '.jpg';
+              if (posterUrl.toLowerCase().contains('.png') ||
+                  ct.contains('png')) {
+                ext = '.png';
+              } else if (posterUrl.toLowerCase().contains('.webp') ||
+                  ct.contains('webp')) {
+                ext = '.webp';
+              } else if (posterUrl.toLowerCase().contains('.jpeg') ||
+                  ct.contains('jpeg')) {
+                ext = '.jpg';
+              }
+              final pf = File(p.join(animeDir.path, 'poster$ext'));
+              await pf.writeAsBytes(resp.data!);
+              posterPath = pf.path;
+            }
+          }
+        } catch (_) {}
+
+        final safeBase = sanitizeFileName(
+          '${task.episodeNumber}_${task.title}',
+        );
+        String outExt;
+        if (task.url.toLowerCase().contains('.m3u8')) {
+          outExt = '.mp4';
+        } else {
+          try {
+            final urlPath = Uri.parse(task.url).path;
+            final ext = p.extension(urlPath);
+            outExt = ext.isNotEmpty ? ext : '.mp4';
+          } catch (_) {
+            outExt = '.mp4';
+          }
+        }
+
+        final savePath = p.join(animeDir.path, '$safeBase$outExt');
+        _activeDownloads[id]?['filePath'] = savePath;
         _emitActive();
+
+        final List<Map<String, String>> downloadedSubs = [];
+        for (final sub in task.subtitles) {
+          try {
+            final resp = await _dio.get<List<int>>(
+              sub.url,
+              options: Options(
+                responseType: ResponseType.bytes,
+                followRedirects: true,
+              ),
+              cancelToken: cancelToken,
+            );
+            if (resp.data != null) {
+              String? ext;
+              final urlLower = sub.url.toLowerCase();
+              if (urlLower.contains('.srt')) {
+                ext = 'srt';
+              } else if (urlLower.contains('.vtt')) {
+                ext = 'vtt';
+              }
+
+              final bytes = resp.data!;
+              final contentStr = utf8
+                  .decode(bytes, allowMalformed: true)
+                  .trimLeft();
+
+              if (ext == null) {
+                final ct = resp.headers.value('content-type') ?? '';
+                if (ct.contains('vtt') || contentStr.startsWith('WEBVTT')) {
+                  ext = 'vtt';
+                } else if (ct.contains('subrip') ||
+                    RegExp(
+                      r'^\d+\s*\r?\n\d{2}:\d{2}:\d{2},\d{3}',
+                    ).hasMatch(contentStr)) {
+                  ext = 'srt';
+                } else {
+                  ext = 'vtt';
+                }
+              }
+
+              final subFile = File(
+                p.join(
+                  animeDir.path,
+                  'EP${task.episodeNumber}_${sanitizeFileName(sub.language)}.$ext',
+                ),
+              );
+              await subFile.writeAsBytes(bytes);
+              downloadedSubs.add({'path': subFile.path, 'lang': sub.language});
+              onSubtitleSaved(sub.language, subFile.path);
+            }
+          } catch (_) {}
+        }
+
+        void localProgress(int received, int? total, double speed) {
+          final entry = _activeDownloads[id];
+          if (entry == null) return;
+          entry['received'] = received;
+          entry['total'] = total;
+          entry['speed'] = speed;
+          if (total != null && speed > 0) {
+            final remaining = (total - received).clamp(0, total);
+            entry['eta'] = (remaining / speed).toDouble();
+          } else {
+            entry['eta'] = null;
+          }
+
+          int percent = 0;
+          if (total != null && total > 0) {
+            percent = ((received / total) * 100).clamp(0, 100).toInt();
+          }
+          entry['progress'] = percent;
+          entry['status'] = 'running';
+          _emitActive();
+
+          try {
+            final recStr = NotificationService.formatFileSize(received);
+            final totStr = total != null
+                ? NotificationService.formatFileSize(total)
+                : 'Unknown';
+            final speedStr = speed > 0
+                ? '${NotificationService.formatFileSize(speed.toInt())}/s'
+                : '—';
+            final desc = '$recStr / $totStr • $speedStr • $percent%';
+            NotificationService.showProgressNotification(
+              id: progressNotificationId,
+              title: '${task.animeTitle} • Ep ${task.episodeNumber}',
+              description: desc,
+              channel: NotificationChannel.downloads,
+              progress: percent,
+              maxProgress: 100,
+              ongoing: true,
+              showProgress: true,
+              silent: true,
+            );
+          } catch (_) {}
+
+          try {
+            onProgress(received, total, speed);
+          } catch (_) {}
+        }
+
+        if (task.url.toLowerCase().contains('.m3u8')) {
+          await _downloadHls(task.url, savePath, localProgress, id);
+
+          if (downloadedSubs.isNotEmpty) {
+            try {
+              final finalMp4 = await _embedSubtitlesIntoMp4(
+                savePath,
+                downloadedSubs,
+              );
+              await recordCompletedDownload(
+                finalMp4,
+                task,
+                posterPath: posterPath,
+              );
+              _activeDownloads.remove(id);
+              _emitActive();
+              try {
+                await NotificationServiceExtensions.showDownloadCompleted(
+                  id: completeNotificationId,
+                  itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
+                  channel: NotificationChannel.downloads,
+                  description:
+                      '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
+                  filePath: finalMp4,
+                  progressNotificationId: progressNotificationId,
+                );
+              } catch (_) {}
+            } catch (e) {
+              await recordCompletedDownload(
+                savePath,
+                task,
+                posterPath: posterPath,
+              );
+              _activeDownloads.remove(id);
+              _emitActive();
+              try {
+                await NotificationServiceExtensions.showDownloadFailed(
+                  id: failedNotificationId,
+                  itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
+                  channel: NotificationChannel.downloads,
+                  error: e.toString(),
+                  progressNotificationId: progressNotificationId,
+                );
+              } catch (_) {}
+            }
+          } else {
+            await recordCompletedDownload(
+              savePath,
+              task,
+              posterPath: posterPath,
+            );
+            _activeDownloads.remove(id);
+            _emitActive();
+            try {
+              await NotificationServiceExtensions.showDownloadCompleted(
+                id: completeNotificationId,
+                itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
+                channel: NotificationChannel.downloads,
+                description:
+                    '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
+                filePath: savePath,
+                progressNotificationId: progressNotificationId,
+              );
+            } catch (_) {}
+          }
+        } else {
+          DateTime lastTick = DateTime.now();
+          int lastReceived = 0;
+          _dio.options.followRedirects = true;
+          await _dio.download(
+            task.url,
+            savePath,
+            onReceiveProgress: (received, total) {
+              final now = DateTime.now();
+              final deltaSec = now.difference(lastTick).inMilliseconds / 1000.0;
+              final deltaBytes = received - lastReceived;
+              final speed = deltaSec > 0 ? (deltaBytes / deltaSec) : 0.0;
+              lastReceived = received;
+              lastTick = now;
+              localProgress(received, total == -1 ? null : total, speed);
+            },
+            options: Options(receiveTimeout: Duration(seconds: 0)),
+            cancelToken: cancelToken,
+          );
+
+          if (downloadedSubs.isNotEmpty) {
+            try {
+              final finalMp4 = await _embedSubtitlesIntoMp4(
+                savePath,
+                downloadedSubs,
+              );
+              await recordCompletedDownload(
+                finalMp4,
+                task,
+                posterPath: posterPath,
+              );
+              _activeDownloads.remove(id);
+              _emitActive();
+              try {
+                await NotificationServiceExtensions.showDownloadCompleted(
+                  id: completeNotificationId,
+                  itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
+                  channel: NotificationChannel.downloads,
+                  description:
+                      '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
+                  filePath: finalMp4,
+                  progressNotificationId: progressNotificationId,
+                );
+              } catch (_) {}
+            } catch (e) {
+              await recordCompletedDownload(
+                savePath,
+                task,
+                posterPath: posterPath,
+              );
+              _activeDownloads.remove(id);
+              _emitActive();
+              try {
+                await NotificationServiceExtensions.showDownloadFailed(
+                  id: failedNotificationId,
+                  itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
+                  channel: NotificationChannel.downloads,
+                  error: e.toString(),
+                  progressNotificationId: progressNotificationId,
+                );
+              } catch (_) {}
+            }
+          } else {
+            await recordCompletedDownload(
+              savePath,
+              task,
+              posterPath: posterPath,
+            );
+            _activeDownloads.remove(id);
+            _emitActive();
+            try {
+              await NotificationServiceExtensions.showDownloadCompleted(
+                id: completeNotificationId,
+                itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
+                channel: NotificationChannel.downloads,
+                description:
+                    '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
+                filePath: savePath,
+                progressNotificationId: progressNotificationId,
+              );
+            } catch (_) {}
+          }
+        }
+
+        onComplete();
+      } catch (e) {
+        final entry = _activeDownloads[id];
+        if (entry != null) entry['status'] = 'failed';
+        _emitActive();
+
         try {
           await NotificationServiceExtensions.showDownloadFailed(
-            id: failedNotificationId,
+            id: NotificationIds.episodeFailed,
             itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
             channel: NotificationChannel.downloads,
-            error: 'Storage permission denied',
+            error: e.toString(),
             progressNotificationId: progressNotificationId,
           );
         } catch (_) {}
-        onError('Storage permission denied');
-        return;
+
+        onError(e.toString());
       }
-
-      final dirPath = await _getDownloadDirectoryPath();
-      final animeFolderName = _sanitizeFileName(
-        task.animeTitle.isNotEmpty ? task.animeTitle : 'Unknown Anime',
-      );
-      final animeDir = Directory(p.join(dirPath, animeFolderName));
-      if (!animeDir.existsSync()) animeDir.createSync(recursive: true);
-
-      String? posterPath;
-      try {
-        final posterUrl = (task as dynamic).posterUrl != null
-            ? (task as dynamic).posterUrl as String?
-            : null;
-        if (posterUrl != null && posterUrl.isNotEmpty) {
-          final resp = await _dio.get<List<int>>(
-            posterUrl,
-            options: Options(
-              responseType: ResponseType.bytes,
-              followRedirects: true,
-            ),
-          );
-          if (resp.data != null) {
-            final ct = resp.headers.value('content-type') ?? '';
-            String ext = '.jpg';
-            if (posterUrl.toLowerCase().contains('.png') ||
-                ct.contains('png')) {
-              ext = '.png';
-            } else if (posterUrl.toLowerCase().contains('.webp') ||
-                ct.contains('webp')) {
-              ext = '.webp';
-            } else if (posterUrl.toLowerCase().contains('.jpeg') ||
-                ct.contains('jpeg')) {
-              ext = '.jpg';
-            }
-            final pf = File(p.join(animeDir.path, 'poster$ext'));
-            await pf.writeAsBytes(resp.data!);
-            posterPath = pf.path;
-          }
-        }
-      } catch (_) {}
-
-      final safeBase = _sanitizeFileName('${task.episodeNumber}_${task.title}');
-      String outExt;
-      if (task.url.toLowerCase().contains('.m3u8')) {
-        outExt = '.mp4';
-      } else {
-        try {
-          final urlPath = Uri.parse(task.url).path;
-          final ext = p.extension(urlPath);
-          outExt = ext.isNotEmpty ? ext : '.mp4';
-        } catch (_) {
-          outExt = '.mp4';
-        }
-      }
-
-      final savePath = p.join(animeDir.path, '$safeBase$outExt');
-      _activeDownloads[id]?['filePath'] = savePath;
-      _emitActive();
-
-      final List<Map<String, String>> downloadedSubs = [];
-      for (final sub in task.subtitles) {
-        try {
-          final resp = await _dio.get<List<int>>(
-            sub.url,
-            options: Options(
-              responseType: ResponseType.bytes,
-              followRedirects: true,
-            ),
-          );
-          if (resp.data != null) {
-            String? ext;
-            final urlLower = sub.url.toLowerCase();
-            if (urlLower.contains('.srt')) {
-              ext = 'srt';
-            } else if (urlLower.contains('.vtt')) {
-              ext = 'vtt';
-            }
-
-            final bytes = resp.data!;
-            final contentStr = utf8
-                .decode(bytes, allowMalformed: true)
-                .trimLeft();
-
-            if (ext == null) {
-              final ct = resp.headers.value('content-type') ?? '';
-              if (ct.contains('vtt') || contentStr.startsWith('WEBVTT')) {
-                ext = 'vtt';
-              } else if (ct.contains('subrip') ||
-                  RegExp(
-                    r'^\d+\s*\r?\n\d{2}:\d{2}:\d{2},\d{3}',
-                  ).hasMatch(contentStr)) {
-                ext = 'srt';
-              } else {
-                ext = 'vtt';
-              }
-            }
-
-            final subFile = File(
-              p.join(
-                animeDir.path,
-                'EP${task.episodeNumber}_${_sanitizeFileName(sub.language)}.$ext',
-              ),
-            );
-            await subFile.writeAsBytes(bytes);
-            downloadedSubs.add({'path': subFile.path, 'lang': sub.language});
-            onSubtitleSaved(sub.language, subFile.path);
-          }
-        } catch (_) {}
-      }
-
-      void localProgress(int received, int? total, double speed) {
-        final entry = _activeDownloads[id];
-        if (entry == null) return;
-        entry['received'] = received;
-        entry['total'] = total;
-        entry['speed'] = speed;
-        if (total != null && speed > 0) {
-          final remaining = (total - received).clamp(0, total);
-          entry['eta'] = (remaining / speed).toDouble();
-        } else {
-          entry['eta'] = null;
-        }
-
-        int percent = 0;
-        if (total != null && total > 0) {
-          percent = ((received / total) * 100).clamp(0, 100).toInt();
-        }
-        entry['progress'] = percent;
-        entry['status'] = 'running';
-        _emitActive();
-
-        try {
-          final recStr = NotificationService.formatFileSize(received);
-          final totStr = total != null
-              ? NotificationService.formatFileSize(total)
-              : 'Unknown';
-          final speedStr = speed > 0
-              ? '${NotificationService.formatFileSize(speed.toInt())}/s'
-              : '—';
-          final desc = '$recStr / $totStr • $speedStr • $percent%';
-          NotificationService.showProgressNotification(
-            id: progressNotificationId,
-            title: '${task.animeTitle} • Ep ${task.episodeNumber}',
-            description: desc,
-            channel: NotificationChannel.downloads,
-            progress: percent,
-            maxProgress: 100,
-            ongoing: true,
-            showProgress: true,
-            silent: true,
-          );
-        } catch (_) {}
-
-        try {
-          onProgress(received, total, speed);
-        } catch (_) {}
-      }
-
-      if (task.url.toLowerCase().contains('.m3u8')) {
-        await _downloadHls(task.url, savePath, localProgress);
-
-        if (downloadedSubs.isNotEmpty) {
-          try {
-            final finalMp4 = await _embedSubtitlesIntoMp4(
-              savePath,
-              downloadedSubs,
-            );
-            await _recordCompletedDownload(
-              finalMp4,
-              task,
-              posterPath: posterPath,
-            );
-            _activeDownloads.remove(id);
-            _emitActive();
-            try {
-              await NotificationServiceExtensions.showDownloadCompleted(
-                id: completeNotificationId,
-                itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
-                channel: NotificationChannel.downloads,
-                description:
-                    '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
-                filePath: finalMp4,
-                progressNotificationId: progressNotificationId,
-              );
-            } catch (_) {}
-          } catch (e) {
-            await _recordCompletedDownload(
-              savePath,
-              task,
-              posterPath: posterPath,
-            );
-            _activeDownloads.remove(id);
-            _emitActive();
-            try {
-              await NotificationServiceExtensions.showDownloadFailed(
-                id: failedNotificationId,
-                itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
-                channel: NotificationChannel.downloads,
-                error: e.toString(),
-                progressNotificationId: progressNotificationId,
-              );
-            } catch (_) {}
-          }
-        } else {
-          await _recordCompletedDownload(
-            savePath,
-            task,
-            posterPath: posterPath,
-          );
-          _activeDownloads.remove(id);
-          _emitActive();
-          try {
-            await NotificationServiceExtensions.showDownloadCompleted(
-              id: completeNotificationId,
-              itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
-              channel: NotificationChannel.downloads,
-              description:
-                  '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
-              filePath: savePath,
-              progressNotificationId: progressNotificationId,
-            );
-          } catch (_) {}
-        }
-      } else {
-        DateTime lastTick = DateTime.now();
-        int lastReceived = 0;
-        _dio.options.followRedirects = true;
-        await _dio.download(
-          task.url,
-          savePath,
-          onReceiveProgress: (received, total) {
-            final now = DateTime.now();
-            final deltaSec = now.difference(lastTick).inMilliseconds / 1000.0;
-            final deltaBytes = received - lastReceived;
-            final speed = deltaSec > 0 ? (deltaBytes / deltaSec) : 0.0;
-            lastReceived = received;
-            lastTick = now;
-            localProgress(received, total == -1 ? null : total, speed);
-          },
-          options: Options(receiveTimeout: Duration(seconds: 0)),
-        );
-
-        if (downloadedSubs.isNotEmpty) {
-          try {
-            final finalMp4 = await _embedSubtitlesIntoMp4(
-              savePath,
-              downloadedSubs,
-            );
-            await _recordCompletedDownload(
-              finalMp4,
-              task,
-              posterPath: posterPath,
-            );
-            _activeDownloads.remove(id);
-            _emitActive();
-            try {
-              await NotificationServiceExtensions.showDownloadCompleted(
-                id: completeNotificationId,
-                itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
-                channel: NotificationChannel.downloads,
-                description:
-                    '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
-                filePath: finalMp4,
-                progressNotificationId: progressNotificationId,
-              );
-            } catch (_) {}
-          } catch (e) {
-            await _recordCompletedDownload(
-              savePath,
-              task,
-              posterPath: posterPath,
-            );
-            _activeDownloads.remove(id);
-            _emitActive();
-            try {
-              await NotificationServiceExtensions.showDownloadFailed(
-                id: failedNotificationId,
-                itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
-                channel: NotificationChannel.downloads,
-                error: e.toString(),
-                progressNotificationId: progressNotificationId,
-              );
-            } catch (_) {}
-          }
-        } else {
-          await _recordCompletedDownload(
-            savePath,
-            task,
-            posterPath: posterPath,
-          );
-          _activeDownloads.remove(id);
-          _emitActive();
-          try {
-            await NotificationServiceExtensions.showDownloadCompleted(
-              id: completeNotificationId,
-              itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
-              channel: NotificationChannel.downloads,
-              description:
-                  '${task.animeTitle} • Ep ${task.episodeNumber} - ${task.title}',
-              filePath: savePath,
-              progressNotificationId: progressNotificationId,
-            );
-          } catch (_) {}
-        }
-      }
-
-      onComplete();
-    } catch (e) {
-      final entry = _activeDownloads[id];
-      if (entry != null) entry['status'] = 'failed';
-      _emitActive();
-
-      try {
-        await NotificationServiceExtensions.showDownloadFailed(
-          id: NotificationIds.episodeFailed,
-          itemName: '${task.animeTitle} • Ep ${task.episodeNumber}',
-          channel: NotificationChannel.downloads,
-          error: e.toString(),
-          progressNotificationId: progressNotificationId,
-        );
-      } catch (_) {}
-
-      onError(e.toString());
+    } catch (e, st) {
+      debugPrint('Error downloading file: $e');
+      debugPrint('Stack trace: $st');
     }
   }
 
-  Future<double?> _resolvePlaylistDuration(String url) async {
+  Future<double?> resolvePlaylistDuration(String url) async {
     try {
       final probeSession = await FFprobeKit.getMediaInformation(url);
       final info = probeSession.getMediaInformation();
@@ -561,13 +631,14 @@ class DownloadsRepository {
     String playlistUrl,
     String savePath,
     ProgressCallback onProgress,
+    String id,
   ) async {
     final outFile = File(savePath);
     final parent = outFile.parent;
     if (!parent.existsSync()) parent.createSync(recursive: true);
 
     final tempPath = savePath;
-    double? totalDurationSec = await _resolvePlaylistDuration(playlistUrl);
+    double? totalDurationSec = await resolvePlaylistDuration(playlistUrl);
 
     final escapedUrl = playlistUrl.replaceAll('"', '\\"');
     final escapedOut = savePath.replaceAll('"', '\\"');
@@ -580,91 +651,145 @@ class DownloadsRepository {
     int lastBytesSample = 0;
     int lastSampleTime = stopwatch.elapsedMilliseconds;
 
-    try {
-      FFmpegKit.executeAsync(
-        cmd,
-        (session) async {
-          try {
-            final rc = await session.getReturnCode();
-            final failTrace = await session.getFailStackTrace();
+    // Fallback polling for progress in case stats callbacks fail or aren't supported
+    void startPolling() {
+      pollTimer?.cancel();
+      pollTimer = Timer.periodic(Duration(milliseconds: 1000), (_) {
+        try {
+          final tmp = File(tempPath);
+          if (!tmp.existsSync()) return;
+          final current = tmp.lengthSync();
+          final now = stopwatch.elapsedMilliseconds;
+          final dt = max(1, now - lastSampleTime);
+          final delta = current - lastBytesSample;
+          final speed = delta / (dt / 1000.0);
+          lastBytesSample = current;
+          lastSampleTime = now;
 
-            pollTimer?.cancel();
-            stopwatch.stop();
-            if (ReturnCode.isSuccess(rc)) {
-              _cleanupPlaylists(parent.path);
-              completer.complete();
-            } else {
-              try {
-                if (File(tempPath).existsSync()) File(tempPath).deleteSync();
-              } catch (_) {}
-              final codeVal = rc?.getValue();
-              completer.completeError(
-                'FFmpeg failed (rc=$codeVal) ${failTrace ?? ''}',
-              );
-            }
-          } catch (e) {
-            pollTimer?.cancel();
-            stopwatch.stop();
-
-            completer.completeError(e.toString());
+          if (totalDurationSec != null && totalDurationSec > 0) {
+            // If we have duration, we can try to estimate total size based on average bitrate or current percent (not easy without stats)
+            // For now, just report current received
+            onProgress(current, null, speed);
+          } else {
+            onProgress(current, null, speed);
           }
-        },
-        (log) {},
-        (statistics) {
-          try {
-            final timeMs = statistics.getTime();
-            final size = statistics.getSize();
-            final bitrate = statistics.getBitrate();
+        } catch (_) {}
+      });
+    }
 
-            if (totalDurationSec != null && totalDurationSec > 0) {
-              final timeSec = timeMs / 1000.0;
-              final percent = (timeSec / totalDurationSec).clamp(0.0, 1.0);
-              if (size > 0) {
-                final estimatedTotal = (size / (percent > 0 ? percent : 1.0))
-                    .toInt();
+    try {
+      try {
+        await FFmpegKit.executeAsync(
+          cmd,
+          (session) async {
+            _cancelTokens.remove(id);
+            try {
+              final rc = await session.getReturnCode();
+              final failTrace = await session.getFailStackTrace();
+
+              pollTimer?.cancel();
+              stopwatch.stop();
+              if (ReturnCode.isSuccess(rc)) {
+                _cleanupPlaylists(parent.path);
+                if (!completer.isCompleted) completer.complete();
+              } else {
+                try {
+                  if (File(tempPath).existsSync()) File(tempPath).deleteSync();
+                } catch (_) {}
+                final codeVal = rc?.getValue();
+                if (!completer.isCompleted) {
+                  completer.completeError(
+                    'FFmpeg failed (rc=$codeVal) ${failTrace ?? ''}',
+                  );
+                }
+              }
+            } catch (e) {
+              pollTimer?.cancel();
+              stopwatch.stop();
+              if (!completer.isCompleted) completer.completeError(e.toString());
+            }
+          },
+          (log) {},
+          (statistics) {
+            if (_cancelledTasks[id] == true) {
+              FFmpegKit.cancel();
+              return;
+            }
+            try {
+              final timeMs = statistics.getTime();
+              final size = statistics.getSize();
+              final bitrate = statistics.getBitrate();
+
+              if (totalDurationSec != null && totalDurationSec > 0) {
+                final timeSec = timeMs / 1000.0;
+                final percent = (timeSec / totalDurationSec).clamp(0.0, 1.0);
+                if (size > 0) {
+                  final estimatedTotal = (size / (percent > 0 ? percent : 1.0))
+                      .toInt();
+                  final elapsedSec =
+                      max(1, stopwatch.elapsedMilliseconds) / 1000.0;
+                  final speed = size / elapsedSec;
+                  onProgress(size.toInt(), estimatedTotal, speed);
+                } else {
+                  final estTotal = _estimateTotalFromBitrate(
+                    bitrate,
+                    totalDurationSec,
+                  );
+                  if (estTotal != null) {
+                    final received = (percent * estTotal).toInt();
+                    final speed =
+                        (estTotal /
+                        (totalDurationSec > 0 ? totalDurationSec : 1.0));
+                    onProgress(received, estTotal, speed);
+                  } else {
+                    onProgress(0, null, 0.0);
+                  }
+                }
+              } else if (size != 0) {
                 final elapsedSec =
                     max(1, stopwatch.elapsedMilliseconds) / 1000.0;
                 final speed = size / elapsedSec;
-                onProgress(size.toInt(), estimatedTotal, speed);
-              } else {
-                final estTotal = _estimateTotalFromBitrate(
-                  bitrate,
-                  totalDurationSec,
-                );
-                if (estTotal != null) {
-                  final received = (percent * estTotal).toInt();
-                  final speed =
-                      (estTotal /
-                      (totalDurationSec > 0 ? totalDurationSec : 1.0));
-                  onProgress(received, estTotal, speed);
-                } else {
-                  onProgress(0, null, 0.0);
-                }
+                onProgress(size.toInt(), null, speed);
               }
-            } else if (size != 0) {
-              final elapsedSec = max(1, stopwatch.elapsedMilliseconds) / 1000.0;
-              final speed = size / elapsedSec;
-              onProgress(size.toInt(), null, speed);
-            }
-          } catch (_) {}
-        },
-      );
+            } catch (_) {}
+          },
+        );
 
-      if (totalDurationSec == null || totalDurationSec <= 0) {
-        pollTimer = Timer.periodic(Duration(milliseconds: 500), (_) {
-          try {
-            final tmp = File(tempPath);
-            if (!tmp.existsSync()) return;
-            final current = tmp.lengthSync();
-            final now = stopwatch.elapsedMilliseconds;
-            final dt = max(1, now - lastSampleTime);
-            final delta = current - lastBytesSample;
-            final speed = delta / (dt / 1000.0);
-            lastBytesSample = current;
-            lastSampleTime = now;
-            onProgress(current, null, speed);
-          } catch (_) {}
-        });
+        // If we reached here, executeAsync started.
+        // We still start polling if duration is unknown as a safety measure.
+        if (totalDurationSec == null || totalDurationSec <= 0) {
+          startPolling();
+        }
+      } catch (e) {
+        // Handle MissingPluginException for event channels in background isolates
+        if (e.toString().contains('MissingPluginException') ||
+            e.toString().contains('ffmpeg_kit_event')) {
+          debugPrint(
+            'FFmpegKit event channel missing in isolate, using fallback execute',
+          );
+          startPolling();
+
+          final session = await FFmpegKit.execute(cmd);
+          _cancelTokens.remove(id);
+
+          final rc = await session.getReturnCode();
+          pollTimer?.cancel();
+          stopwatch.stop();
+
+          if (ReturnCode.isSuccess(rc)) {
+            _cleanupPlaylists(parent.path);
+            if (!completer.isCompleted) completer.complete();
+          } else {
+            try {
+              if (File(tempPath).existsSync()) File(tempPath).deleteSync();
+            } catch (_) {}
+            if (!completer.isCompleted) {
+              completer.completeError('FFmpeg failed (rc=${rc?.getValue()})');
+            }
+          }
+        } else {
+          rethrow;
+        }
       }
 
       await completer.future;
@@ -816,7 +941,7 @@ class DownloadsRepository {
     }
   }
 
-  Future<void> _recordCompletedDownload(
+  Future<void> recordCompletedDownload(
     String filePath,
     DownloadTask task, {
     String? posterPath,
@@ -898,6 +1023,9 @@ class DownloadsRepository {
           if (entity is File) {
             final ext = p.extension(entity.path).toLowerCase();
             if (!extensions.contains(ext)) continue;
+            if (_ongoingPaths.contains(entity.path)) {
+              continue; // Skip ongoing downloads
+            }
             foundFiles.add(entity.path);
             final stat = await entity.stat();
             if (indexByPath.containsKey(entity.path)) {
@@ -1046,7 +1174,8 @@ class DownloadsRepository {
     String variantUrl,
     String savePath,
     ProgressCallback onProgress,
+    String id,
   ) async {
-    return _downloadHls(variantUrl, savePath, onProgress);
+    return _downloadHls(variantUrl, savePath, onProgress, id);
   }
 }

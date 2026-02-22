@@ -1,9 +1,27 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:toastification/toastification.dart';
 
 class Toast {
   Toast({
+    required BuildContext context,
+    required String title,
+    required String description,
+    ToastificationType type = ToastificationType.error,
+    Duration? duration = const Duration(seconds: 5),
+    AlignmentGeometry alignment = Alignment.bottomCenter,
+  }) {
+    _showToastification(
+      context: context,
+      title: title,
+      description: description,
+      type: type,
+      duration: duration,
+      alignment: alignment,
+    );
+  }
+
+  void _showToastification({
     required BuildContext context,
     required String title,
     required String description,
@@ -22,13 +40,9 @@ class Toast {
         style: TextStyle(
           color: _getToastColor(type),
           fontWeight: FontWeight.bold,
-          fontFamily: 'SFPro',
         ),
       ),
-      description: Text(
-        description,
-        style: TextStyle(fontWeight: FontWeight.w600, fontFamily: 'SFPro'),
-      ),
+      description: Text(description),
       alignment: alignment,
       direction: TextDirection.ltr,
       animationDuration: const Duration(milliseconds: 300),
@@ -37,8 +51,8 @@ class Toast {
       },
       showIcon: false,
       primaryColor: _getToastColor(type),
-      backgroundColor: AppTheme.whiteGradient,
-      foregroundColor: AppTheme.blackGradient,
+      backgroundColor: Colors.white,
+      foregroundColor: Colors.black,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       borderRadius: BorderRadius.circular(12),
@@ -69,7 +83,7 @@ class Toast {
       case ToastificationType.info:
         return AppTheme.primaryBlue;
       default:
-        return AppTheme.primaryGreen;
+        return AppTheme.primaryBlue;
     }
   }
 }

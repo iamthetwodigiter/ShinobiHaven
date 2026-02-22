@@ -66,131 +66,90 @@ class SpotlightCard extends StatelessWidget {
                   height: 400,
                   width: size.width,
                   decoration: BoxDecoration(
-                    color: AppTheme.blackGradient.withAlpha(166),
-                    borderRadius: BorderRadius.circular(18),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withAlpha(50),
+                        Colors.black.withAlpha(200),
+                        Colors.black,
+                      ],
+                    ),
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.all(18),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 30,
+                  ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if(anime.rank != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.gradient1,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          anime.rank!,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       Text(
                         anime.title,
-                        style: TextStyle(
-                          color: AppTheme.whiteGradient,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(
-                              color: AppTheme.blackGradient.withAlpha(120),
-                              blurRadius: 6,
-                            ),
-                          ],
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          height: 1.1,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      SizedBox(height: 10),
-                      Wrap(
-                        spacing: 16,
-                        runSpacing: 8,
+                      const SizedBox(height: 12),
+                      Row(
                         children: [
-                          if (anime.dubCount != null)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.mic,
-                                  size: 16,
-                                  color: AppTheme.whiteGradient,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  anime.dubCount ?? '',
-                                  style: TextStyle(
-                                    color: AppTheme.whiteGradient,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          if (anime.subCount != null)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.closed_caption,
-                                  size: 16,
-                                  color: AppTheme.whiteGradient,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  anime.subCount ?? '',
-                                  style: TextStyle(
-                                    color: AppTheme.whiteGradient,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          if (anime.type != null)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.play_circle,
-                                  size: 16,
-                                  color: AppTheme.whiteGradient,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  anime.type ?? '',
-                                  style: TextStyle(
-                                    color: AppTheme.whiteGradient,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          if (anime.subCount != null) ...[
+                            _infoBadge(Icons.closed_caption, anime.subCount!),
+                            const SizedBox(width: 12),
+                          ],
+                          if (anime.dubCount != null) ...[
+                            _infoBadge(Icons.mic, anime.dubCount!),
+                            const SizedBox(width: 12),
+                          ],
+                          if (anime.type != null) ...[
+                            _infoBadge(Icons.play_arrow_rounded, anime.type!),
+                            const SizedBox(width: 12),
+                          ],
                           if (anime.duration != null)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.timelapse_rounded,
-                                  size: 16,
-                                  color: AppTheme.whiteGradient,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  anime.duration ?? '',
-                                  style: TextStyle(
-                                    color: AppTheme.whiteGradient,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
+                            _infoBadge(Icons.timer_outlined, anime.duration!),
                         ],
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       Text(
                         anime.description ?? '',
                         style: TextStyle(
-                          color: AppTheme.whiteGradient,
-                          fontSize: 15,
+                          color: Colors.white.withAlpha(180),
+                          fontSize: 14,
                           fontWeight: FontWeight.w400,
+                          height: 1.4,
                         ),
-                        maxLines: 3,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      SizedBox(height: 20),
                     ],
                   ),
                 ),
@@ -202,10 +161,27 @@ class SpotlightCard extends StatelessWidget {
       options: CarouselOptions(
         height: 400,
         viewportFraction: 1,
-        aspectRatio: 5 / 3,
         autoPlay: true,
-        autoPlayInterval: Duration(seconds: 5),
+        autoPlayInterval: const Duration(seconds: 8),
+        autoPlayCurve: Curves.fastOutSlowIn,
       ),
+    );
+  }
+
+  Widget _infoBadge(IconData icon, String label) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppTheme.gradient1),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }

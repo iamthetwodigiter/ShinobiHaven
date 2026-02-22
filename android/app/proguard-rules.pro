@@ -6,6 +6,8 @@
 
 -keep class com.arthenica.** { *; }
 -keep class com.arthenica.ffmpegkit.** { *; }
+-keep class com.antonkarpenko.** { *; }
+-keep class com.antonkarpenko.ffmpegkit.** { *; }
 -keep class org.ffmpeg.** { *; }
 
 -keep class dev.flutter.pigeon.** { *; }

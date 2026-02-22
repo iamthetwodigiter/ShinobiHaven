@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:shinobihaven/core/constants/app_details.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
@@ -7,17 +9,20 @@ import 'package:shinobihaven/features/anime/discovery/view/pages/favorites_page.
 import 'package:shinobihaven/features/anime/discovery/view/pages/library_page.dart';
 import 'package:shinobihaven/features/anime/home/view/pages/home_page.dart';
 import 'package:shinobihaven/features/download/view/pages/downloads_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shinobihaven/features/download/dependency_injection/downloads_provider.dart';
 
-class LandingPage extends StatefulWidget {
+class LandingPage extends ConsumerStatefulWidget {
   const LandingPage({super.key});
 
   @override
-  State<LandingPage> createState() => _LandingPageState();
+  ConsumerState<LandingPage> createState() => _LandingPageState();
 }
 
-class _LandingPageState extends State<LandingPage> {
+class _LandingPageState extends ConsumerState<LandingPage> {
   int _currentIndex = 0;
   final String _installedAppVersion = AppDetails.version;
+  StreamSubscription? _notifSub;
 
   List<Widget> get _pages => [
     HomePage(),
@@ -36,6 +41,23 @@ class _LandingPageState extends State<LandingPage> {
         _showChangelogIfNewVersion(_installedAppVersion);
       }
     });
+
+    _notifSub = ref
+        .read(downloadsViewModelProvider.notifier)
+        .onNotificationTap
+        .listen((_) {
+          if (mounted) {
+            setState(() {
+              _currentIndex = 2; // Downloads tab index
+            });
+          }
+        });
+  }
+
+  @override
+  void dispose() {
+    _notifSub?.cancel();
+    super.dispose();
   }
 
   void _showChangelogIfNewVersion(String newVersion) async {
@@ -98,7 +120,7 @@ class _LandingPageState extends State<LandingPage> {
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: entries.length,
-                    separatorBuilder: (_, __) => SizedBox(height: 8),
+                    separatorBuilder: (_, _) => SizedBox(height: 8),
                     itemBuilder: (ctx, i) {
                       final data = entries[i].value;
                       final title = (data is Map && data['title'] != null)
@@ -163,32 +185,109 @@ class _LandingPageState extends State<LandingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = UserBoxFunctions.isDarkMode(context);
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (itemIndex) {
-          setState(() {
-            _currentIndex = itemIndex;
-          });
-        },
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              height: 70,
+              decoration: BoxDecoration(
+                color: (isDark ? Colors.black : Colors.white).withAlpha(180),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: AppTheme.gradient1.withAlpha(80),
+                  width: 1.5,
+                ),
+                boxShadow: AppTheme.premiumShadow,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _navItem(0, Icons.home_rounded, Icons.home_outlined, 'Home'),
+                  _navItem(
+                    1,
+                    Icons.favorite_rounded,
+                    Icons.favorite_outline,
+                    'Favorites',
+                  ),
+                  _navItem(
+                    2,
+                    Icons.download_rounded,
+                    Icons.download_outlined,
+                    'Downloads',
+                  ),
+                  _navItem(
+                    3,
+                    Icons.video_library_rounded,
+                    Icons.video_library_outlined,
+                    'Library',
+                  ),
+                  _navItem(
+                    4,
+                    Icons.person_rounded,
+                    Icons.person_outline,
+                    'Profile',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-        items: [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
-            label: 'Favorites',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.download),
-            label: 'Downloads',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.view_list),
-            label: 'Library',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
+  Widget _navItem(
+    int index,
+    IconData selectedIcon,
+    IconData unselectedIcon,
+    String label,
+  ) {
+    final isSelected = _currentIndex == index;
+    final color = isSelected ? AppTheme.gradient1 : AppTheme.greyGradient;
+
+    return GestureDetector(
+      onTap: () => setState(() => _currentIndex = index),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.gradient1.withAlpha(30)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? selectedIcon : unselectedIcon,
+              color: color,
+              size: isSelected ? 26 : 24,
+            ),
+            if (isSelected)
+              AnimatedOpacity(
+                opacity: isSelected ? 1 : 0,
+                duration: const Duration(milliseconds: 300),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

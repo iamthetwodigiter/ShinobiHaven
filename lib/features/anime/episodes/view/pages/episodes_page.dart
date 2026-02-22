@@ -10,7 +10,6 @@ import 'package:shinobihaven/features/anime/common/model/anime.dart';
 import 'package:shinobihaven/features/anime/episodes/dependency_injection/episodes_provider.dart';
 import 'package:shinobihaven/features/anime/episodes/model/episodes.dart';
 import 'package:shinobihaven/features/anime/stream/view/pages/sources_page.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:toastification/toastification.dart';
 
 class EpisodesPage extends ConsumerStatefulWidget {
@@ -23,10 +22,7 @@ class EpisodesPage extends ConsumerStatefulWidget {
 
 class _EpisodesPageState extends ConsumerState<EpisodesPage> {
   late final TextEditingController _searchController;
-  final OutlineInputBorder _border = OutlineInputBorder(
-    borderSide: BorderSide(color: AppTheme.gradient1),
-    borderRadius: BorderRadius.circular(15),
-  );
+
   List<Episodes> _episodes = [];
   List<Episodes> _allEpisodes = [];
   List<String> _watchedEpisodes = [];
@@ -95,8 +91,6 @@ class _EpisodesPageState extends ConsumerState<EpisodesPage> {
   }
 
   void _playEpisode(Episodes selectedEpisode) {
-    // Navigate directly to SourcesPage with all episodes
-    // Don't pass serverID so it will auto-select the first available server
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -104,260 +98,250 @@ class _EpisodesPageState extends ConsumerState<EpisodesPage> {
           anime: widget.anime,
           episodes: _allEpisodes,
           currentEpisode: selectedEpisode,
-          // serverID: null, // Let it auto-select first server
         ),
       ),
     );
   }
 
-  Widget _animeHeader(BuildContext context, Size size) {
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-      padding: EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.brightnessOf(context) == Brightness.dark
-                ? AppTheme.primaryBlack
-                : AppTheme.whiteGradient,
-            AppTheme.gradient1.withValues(alpha: 0.2),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.gradient1.withValues(alpha: 0.25)),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.gradient1.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: Offset(0, 2),
+  Widget _buildSliverHeader() {
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      sliver: SliverToBoxAdapter(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(15),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withAlpha(30), width: 1),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(15),
-            child: CachedNetworkImage(
-              imageUrl: widget.anime.image,
-              height: 150,
-              width: 100,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Shimmer.fromColors(
-                baseColor: AppTheme.blackGradient,
-                highlightColor: AppTheme.gradient1.withValues(alpha: 0.3),
-                child: Container(
-                  height: 120,
-                  width: 90,
-                  color: AppTheme.blackGradient,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.anime.title,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.gradient1,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 8),
-                if (widget.anime.dubCount != null)
-                  Text(
-                    'Dubbed: ${widget.anime.dubCount}',
-                    style: TextStyle(
-                      color: AppTheme.whiteGradient,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                if (widget.anime.subCount != null)
-                  Text(
-                    'Subbed: ${widget.anime.subCount}',
-                    style: TextStyle(
-                      color: AppTheme.whiteGradient,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                if (widget.anime.type != null)
-                  Text(
-                    'Type: ${widget.anime.type}',
-                    style: TextStyle(color: AppTheme.whiteGradient),
-                  ),
-                if (widget.anime.duration != null)
-                  Text(
-                    'Avg Duration: ${widget.anime.duration}',
-                    style: TextStyle(color: AppTheme.whiteGradient),
-                  ),
-                SizedBox(height: 8),
-                Text(
-                  'Watched: ${_watchedEpisodes.length} Episodes',
-                  style: TextStyle(
-                    color: AppTheme.primaryGreen,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _searchBar(BuildContext context, Size size) {
-    return Container(
-      width: size.width,
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Theme.brightnessOf(context) == Brightness.dark
-          ? AppTheme.primaryBlack
-          : AppTheme.whiteGradient,
-      child: _isSearchEnabled
-          ? TextField(
-              controller: _searchController,
-              cursorColor: AppTheme.gradient1,
-              onChanged: (value) {
-                _searchEpisodes(value);
-              },
-              onSubmitted: (value) {
-                _searchEpisodes(value);
-              },
-              decoration: InputDecoration(
-                hintText: 'Search Episode',
-                hintStyle: TextStyle(
-                  color: AppTheme.whiteGradient.withValues(alpha: 0.6),
-                ),
-                border: _border,
-                enabledBorder: _border,
-                focusedBorder: _border,
-                suffixIcon: IconButton(
-                  onPressed: () {
-                    setState(() {
-                      _isSearchEnabled = false;
-                      _searchController.clear();
-                      _searchEpisodes('');
-                    });
-                  },
-                  icon: Icon(Icons.close, color: AppTheme.gradient1),
-                ),
-              ),
-            )
-          : Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Episodes',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.gradient1,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () {
-                    setState(() {
-                      _isSearchEnabled = true;
-                    });
-                  },
-                  icon: Icon(Icons.search, color: AppTheme.gradient1),
-                ),
-              ],
-            ),
-    );
-  }
-
-  Widget _episodeTile(Episodes episode) {
-    final watched = _watchedEpisodes.contains(episode.episodeID);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Material(
-        color: watched
-            ? AppTheme.gradient1.withValues(alpha: 0.15)
-            : AppTheme.blackGradient,
-        borderRadius: BorderRadius.circular(12),
-        elevation: watched ? 2 : 0,
-        child: ListTile(
-          titleAlignment: ListTileTitleAlignment.top,
-          enableFeedback: true,
-          splashColor: AppTheme.gradient1.withValues(alpha: 0.1),
-          tileColor: Theme.brightnessOf(context) == Brightness.dark
-              ? AppTheme.primaryBlack
-              : AppTheme.whiteGradient,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: AppTheme.gradient1, width: 0.25),
-          ),
-          onTap: () {
-            _playEpisode(episode); // Direct navigation to video player
-          },
-          leading: Stack(
-            alignment: Alignment.center,
+          child: Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: CachedNetworkImage(
-                  imageUrl: widget.anime.image,
-                  fit: BoxFit.cover,
-                  height: 75,
-                  placeholder: (context, url) => Shimmer.fromColors(
-                    baseColor: AppTheme.blackGradient,
-                    highlightColor: AppTheme.gradient1.withValues(alpha: 0.3),
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      color: AppTheme.blackGradient,
-                    ),
+              Hero(
+                tag: 'anime_poster_${widget.anime.slug}',
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: CachedNetworkImage(
+                    imageUrl: widget.anime.image,
+                    height: 120,
+                    width: 85,
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
-              Icon(
-                Icons.play_circle_fill_rounded,
-                size: 22,
-                color: AppTheme.gradient1,
-              ),
-            ],
-          ),
-          title: Text(
-            episode.title,
-            style: TextStyle(fontWeight: FontWeight.bold),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Episode ${episode.episodeNumber}',
-                style: TextStyle(
-                  color: AppTheme.gradient1,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (watched)
-                Row(
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.done_all_rounded,
-                      color: AppTheme.primaryGreen,
-                      size: 20,
-                    ),
-                    SizedBox(width: 4),
                     Text(
-                      'Watched',
-                      style: TextStyle(
-                        color: AppTheme.primaryGreen,
-                        fontWeight: FontWeight.bold,
+                      widget.anime.title,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        if (widget.anime.type != null) ...[
+                          _buildBadge(
+                            widget.anime.type!.toUpperCase(),
+                            AppTheme.gradient1,
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        _buildBadge(
+                          '${_watchedEpisodes.length}/${_allEpisodes.length} EP',
+                          Colors.white.withAlpha(30),
+                          textColor: Colors.white70,
+                        ),
+                      ],
                     ),
                   ],
                 ),
+              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadge(
+    String text,
+    Color color, {
+    Color textColor = Colors.white,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return SliverAppBar(
+      pinned: true,
+      toolbarHeight: 80,
+      backgroundColor: AppTheme.primaryBlack,
+      automaticallyImplyLeading: false,
+      elevation: 0,
+      title: Container(
+        height: 55,
+        decoration: BoxDecoration(
+          color: Colors.white.withAlpha(15),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: _isSearchEnabled
+                ? AppTheme.gradient1.withAlpha(100)
+                : Colors.white.withAlpha(20),
+            width: 1,
+          ),
+        ),
+        child: TextField(
+          controller: _searchController,
+          cursorColor: AppTheme.gradient1,
+          onChanged: (value) {
+            setState(() => _isSearchEnabled = value.isNotEmpty);
+            _searchEpisodes(value);
+          },
+          style: const TextStyle(color: Colors.white, fontSize: 16),
+          decoration: InputDecoration(
+            hintText: 'Search episode...',
+            hintStyle: TextStyle(
+              color: Colors.white.withAlpha(100),
+              fontSize: 16,
+            ),
+            prefixIcon: Icon(
+              Icons.search_rounded,
+              color: _isSearchEnabled
+                  ? AppTheme.gradient1
+                  : Colors.white.withAlpha(100),
+            ),
+            suffixIcon: _isSearchEnabled
+                ? IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                    onPressed: () {
+                      _searchController.clear();
+                      _searchEpisodes('');
+                      setState(() => _isSearchEnabled = false);
+                    },
+                  )
+                : null,
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 15),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEpisodeTile(Episodes episode) {
+    final watched = _watchedEpisodes.contains(episode.episodeID);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: GestureDetector(
+        onTap: () => _playEpisode(episode),
+        child: Container(
+          decoration: BoxDecoration(
+            color: watched
+                ? AppTheme.gradient1.withAlpha(20)
+                : Colors.white.withAlpha(10),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: watched
+                  ? AppTheme.gradient1.withAlpha(100)
+                  : Colors.white.withAlpha(20),
+              width: 1,
+            ),
+          ),
+          child: IntrinsicHeight(
+            child: Row(
+              children: [
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 100,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.horizontal(
+                          left: Radius.circular(19),
+                        ),
+                        image: DecorationImage(
+                          image: CachedNetworkImageProvider(widget.anime.image),
+                          fit: BoxFit.cover,
+                          opacity: 0.6,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.play_circle_filled_rounded,
+                      color: AppTheme.gradient1,
+                      size: 32,
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Episode ${episode.episodeNumber}',
+                          style: TextStyle(
+                            color: AppTheme.gradient1,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          episode.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (watched)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: Icon(
+                      Icons.check_circle_rounded,
+                      color: AppTheme.primaryGreen,
+                      size: 20,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -366,162 +350,182 @@ class _EpisodesPageState extends ConsumerState<EpisodesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
     final episodesData = ref.watch(episodesViewModelProvider);
     _isFavorite = FavoritesBoxFunctions.isFavorite(widget.anime.slug);
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.brightnessOf(context) == Brightness.dark
-            ? AppTheme.primaryBlack
-            : AppTheme.whiteGradient,
-        leading: InkWell(
-          onTap: () {
-            Navigator.pop(context);
-          },
-          child: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
-        ),
-        title: Text(
-          'Watching ${widget.anime.title}',
-          style: TextStyle(
-            fontSize: 18,
-            color: AppTheme.gradient1,
-            fontWeight: FontWeight.bold,
-          ),
-          overflow: TextOverflow.ellipsis,
-        ),
-        actionsPadding: EdgeInsets.only(right: 15),
-        actions: [
-          IconButton(
-            onPressed: () {
-              setState(() {
-                bool isAdded = FavoritesBoxFunctions.addToFavorites(
-                  widget.anime,
-                );
-                if (isAdded) {
-                  Toast(
-                    context: context,
-                    title: 'Success',
-                    description: '${widget.anime.title} added to Favorites',
-                    type: ToastificationType.success,
-                  );
-                } else {
-                  Toast(
-                    context: context,
-                    title: 'Well as you wish',
-                    description: '${widget.anime.title} removed from Favorites',
-                    type: ToastificationType.success,
-                  );
-                }
-              });
-            },
-            icon: Icon(
-              _isFavorite ? Icons.favorite : Icons.favorite_border_rounded,
-              color: AppTheme.gradient1,
-            ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: ValueListenableBuilder(
-          valueListenable: Hive.box('library').listenable(),
-          builder: (context, value, child) {
-            _loadLibraryAnimes();
-            return episodesData.when(
-              data: (episodes) {
-                if (_allEpisodes.isEmpty) {
-                  _allEpisodes = List.from(episodes);
-                  _episodes = List.from(episodes);
-                }
-                return Column(
-                  children: [
-                    _animeHeader(context, size),
-                    _searchBar(context, size),
-                    Expanded(
-                      child: _episodes.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.search_off,
-                                    size: 48,
-                                    color: AppTheme.gradient1,
-                                  ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'No episodes found.',
-                                    style: TextStyle(
-                                      color: AppTheme.whiteGradient,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+      backgroundColor: AppTheme.primaryBlack,
+      body: ValueListenableBuilder(
+        valueListenable: Hive.box('library').listenable(),
+        builder: (context, value, child) {
+          _loadLibraryAnimes();
+          return episodesData.when(
+            data: (episodes) {
+              if (_allEpisodes.isEmpty) {
+                _allEpisodes = List.from(episodes);
+                _episodes = List.from(episodes);
+              }
+              return CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  SliverAppBar(
+                    expandedHeight: 180,
+                    pinned: true,
+                    backgroundColor: AppTheme.primaryBlack,
+                    leading: IconButton(
+                      icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withAlpha(200),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    actions: [
+                      IconButton(
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withAlpha(200),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            !_isFavorite
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_outline_rounded,
+                            color: !_isFavorite
+                                ? AppTheme.gradient1
+                                : Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            FavoritesBoxFunctions.addToFavorites(widget.anime);
+                          });
+                          if (_isFavorite) {
+                            Toast(
+                              context: context,
+                              title: 'Added',
+                              description:
+                                  '${widget.anime.title} added to favorites',
+                              type: ToastificationType.success,
+                            );
+                          } else {
+                            Toast(
+                              context: context,
+                              title: 'Removed',
+                              description:
+                                  '${widget.anime.title} removed from favorites',
+                              type: ToastificationType.warning,
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    flexibleSpace: FlexibleSpaceBar(
+                      background: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CachedNetworkImage(
+                            imageUrl: widget.anime.image,
+                            fit: BoxFit.cover,
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                stops: const [0.0, 0.4, 0.9, 1.0],
+                                colors: [
+                                  AppTheme.primaryBlack.withAlpha(150),
+                                  Colors.transparent,
+                                  AppTheme.primaryBlack.withAlpha(200),
+                                  AppTheme.primaryBlack,
                                 ],
                               ),
-                            )
-                          : ListView.builder(
-                              itemCount: _episodes.length,
-                              itemBuilder: (context, index) {
-                                final episode = _episodes.elementAt(index);
-                                return _episodeTile(episode);
-                              },
                             ),
-                    ),
-                  ],
-                );
-              },
-              error: (err, stack) => Container(
-                alignment: Alignment.center,
-                padding: EdgeInsets.symmetric(horizontal: 15),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error, color: AppTheme.gradient1, size: 48),
-                    SizedBox(height: 16),
-                    Text(
-                      'Error occured while fetching the data.\nPlease check your internet connection or try again later.',
-                      style: TextStyle(
-                        color: AppTheme.gradient1,
-                        fontWeight: FontWeight.bold,
+                          ),
+                        ],
                       ),
                     ),
-                    SizedBox(height: 8),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.gradient1,
-                        foregroundColor: AppTheme.whiteGradient,
-                      ),
-                      onPressed: () {
-                        ref
-                            .read(episodesViewModelProvider.notifier)
-                            .loadEpisodes(widget.anime.slug);
-                      },
-                      icon: Icon(Icons.refresh),
-                      label: Text('Retry'),
+                  ),
+                  _buildSliverHeader(),
+                  _buildSearchBar(),
+                  _episodes.isEmpty
+                      ? SliverFillRemaining(
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.search_off_rounded,
+                                  size: 64,
+                                  color: AppTheme.gradient1.withAlpha(100),
+                                ),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'No episodes found',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : SliverPadding(
+                          padding: const EdgeInsets.only(bottom: 30),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) =>
+                                  _buildEpisodeTile(_episodes[index]),
+                              childCount: _episodes.length,
+                            ),
+                          ),
+                        ),
+                ],
+              );
+            },
+            error: (err, stack) => Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: Colors.red,
+                    size: 64,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Failed to load episodes',
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _loadEpisodes,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.gradient1,
                     ),
-                  ],
-                ),
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
-              loading: () => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Shimmer.fromColors(
-                      baseColor: AppTheme.blackGradient,
-                      highlightColor: AppTheme.gradient1.withValues(alpha: 0.3),
-                      child: Icon(Icons.movie, size: 64),
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Loading...',
-                      style: TextStyle(fontSize: 18, color: AppTheme.gradient1),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+            ),
+            loading: () => Center(
+              child: CircularProgressIndicator(color: AppTheme.gradient1),
+            ),
+          );
+        },
       ),
     );
   }

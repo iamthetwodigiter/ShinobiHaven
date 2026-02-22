@@ -119,164 +119,196 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        title: Text('Profile', style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          children: [
-            Center(
-              child: Column(
-                children: [
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(shape: BoxShape.circle),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(100),
-                      child: Image.asset(_userProfile, height: 95, width: 95),
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    _userName,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.gradient1,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text('Welcome to ShinobiHaven!'),
-                ],
+      extendBodyBehindAppBar: true,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 120,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 15,
+              ),
+              title: const Text(
+                'PROFILE',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                  fontSize: 24,
+                ),
               ),
             ),
-            SizedBox(height: 24),
-            _listTile(
-              'Edit Profile',
-              Icons.edit,
-              onPressed: () async {
-                final updated = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => EditProfile()),
-                );
-                if (updated) {
-                  _loadProfile();
-                }
-              },
-            ),
-            _listTile(
-              'Set App Theme',
-              Icons.color_lens_rounded,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SetDarkMode()),
-                );
-              },
-            ),
-            _listTile(
-              'Watch History',
-              Icons.history,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) {
-                      return WatchHistory();
-                    },
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            sliver: SliverList.list(
+              children: [
+                Center(
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 100,
+                        width: 100,
+                        decoration: const BoxDecoration(shape: BoxShape.circle),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(100),
+                          child: Image.asset(
+                            _userProfile,
+                            height: 95,
+                            width: 95,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _userName,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.gradient1,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text('Welcome to ShinobiHaven!'),
+                    ],
                   ),
-                );
-              },
+                ),
+                const SizedBox(height: 24),
+                _listTile(
+                  'Edit Profile',
+                  Icons.edit,
+                  onPressed: () async {
+                    final updated = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const EditProfile(),
+                      ),
+                    );
+                    if (updated == true) {
+                      _loadProfile();
+                    }
+                  },
+                ),
+                _listTile(
+                  'Set App Theme',
+                  Icons.color_lens_rounded,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SetDarkMode(),
+                      ),
+                    );
+                  },
+                ),
+                _listTile(
+                  'Watch History',
+                  Icons.history,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) {
+                          return const WatchHistory();
+                        },
+                      ),
+                    );
+                  },
+                ),
+                _listTile(
+                  "$_userName's Top Animes",
+                  Icons.favorite,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            UserTopAnimes(userName: _userName),
+                      ),
+                    );
+                  },
+                ),
+                _listTile(
+                  "Manage App Data",
+                  Icons.storage,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ManageAppData(),
+                      ),
+                    );
+                  },
+                ),
+                _listTile(
+                  'Privacy Policy',
+                  Icons.privacy_tip_rounded,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) {
+                          return const PrivacyPolicyPage();
+                        },
+                      ),
+                    );
+                  },
+                ),
+                _listTile(
+                  'Changelog',
+                  Icons.change_circle_outlined,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) {
+                          return const ChangelogPage();
+                        },
+                      ),
+                    );
+                  },
+                ),
+                _listTile(
+                  'Update Settings',
+                  Icons.settings_system_daydream,
+                  onPressed: _showUpdateSettings,
+                ),
+                Consumer(
+                  builder: (context, ref, child) {
+                    final isChecking = ref.watch(updateCheckStatusProvider);
+                    return _listTile(
+                      'Check for updates',
+                      Icons.system_update_sharp,
+                      onPressed: isChecking ? null : _checkForUpdates,
+                      subtitle: isChecking ? 'Checking...' : null,
+                    );
+                  },
+                ),
+                _listTile(
+                  'Want to contribute to the project?',
+                  Icons.emoji_emotions_rounded,
+                  onPressed: () {
+                    _launchGitHub();
+                  },
+                ),
+                _listTile(
+                  'App Version',
+                  Icons.android,
+                  subtitle:
+                      '${AppDetails.version} ${AppDetails.isBeta ? 'Beta' : ''}',
+                ),
+                _listTile(
+                  'Developed with ❤️ by ${AppDetails.developer}',
+                  Icons.code_rounded,
+                  subtitle: '',
+                ),
+                const SizedBox(height: 75),
+              ],
             ),
-            _listTile(
-              "$_userName's Top Animes",
-              Icons.favorite,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => UserTopAnimes(userName: _userName),
-                  ),
-                );
-              },
-            ),
-            _listTile(
-              "Manage App Data",
-              Icons.storage,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ManageAppData()),
-                );
-              },
-            ),
-            _listTile(
-              'Privacy Policy',
-              Icons.privacy_tip_rounded,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) {
-                      return PrivacyPolicyPage();
-                    },
-                  ),
-                );
-              },
-            ),
-            _listTile(
-              'Changelog',
-              Icons.change_circle_outlined,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) {
-                      return ChangelogPage();
-                    },
-                  ),
-                );
-              },
-            ),
-            _listTile(
-              'Update Settings',
-              Icons.settings_system_daydream,
-              onPressed: _showUpdateSettings,
-            ),
-            Consumer(
-              builder: (context, ref, child) {
-                final isChecking = ref.watch(updateCheckStatusProvider);
-                return _listTile(
-                  'Check for updates',
-                  Icons.system_update_sharp,
-                  onPressed: isChecking ? null : _checkForUpdates,
-                  subtitle: isChecking ? 'Checking...' : null,
-                );
-              },
-            ),
-            _listTile(
-              'Want to contribute to the project?',
-              Icons.emoji_emotions_rounded,
-              onPressed: () {
-                _launchGitHub();
-              },
-            ),
-            _listTile(
-              'App Version',
-              Icons.android,
-              subtitle:
-                  '${AppDetails.version} ${AppDetails.isBeta ? 'Beta' : ''}',
-            ),
-            _listTile(
-              'Developed with ❤️ by ${AppDetails.developer}',
-              Icons.code_rounded,
-              subtitle: '',
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -362,178 +394,225 @@ class _EditProfileState extends ConsumerState<EditProfile> {
     final size = MediaQuery.sizeOf(context);
     _loadProfile();
     return Scaffold(
-      appBar: AppBar(
-        leading: InkWell(
-          onTap: () {
-            Navigator.pop(context);
-          },
-          child: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
-        ),
-        title: Text(
-          'Edit Profile',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actionsPadding: EdgeInsets.only(right: 10),
-        actions: [
-          IconButton(
-            onPressed: () {
-              setState(() {
-                _changeUserName(
-                  _nameController.text.trim().isEmpty
-                      ? _userName
-                      : _nameController.text.trim(),
-                );
-              });
-              Toast(
-                context: context,
-                title: 'Profile Updated',
-                description:
-                    'All right we will call you $_userName from now on',
-                type: ToastificationType.success,
-              );
-              Navigator.pop(context, true);
-            },
-            icon: Text(
-              'Done',
-              style: TextStyle(
-                color: AppTheme.gradient1,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                Container(
-                  height: 100,
-                  width: 100,
-                  decoration: BoxDecoration(shape: BoxShape.circle),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(100),
-                    child: Image.asset(_userProfile, height: 95, width: 95),
-                  ),
-                ),
-                SizedBox(height: 12),
-                Text(
-                  _userName,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.gradient1,
-                  ),
-                ),
-                SizedBox(height: 4),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    _focusNode.unfocus();
-                  },
-                  child: SingleChildScrollView(
-                    child: Container(
-                      width: size.width,
-                      padding: EdgeInsets.symmetric(horizontal: 30),
-                      child: Column(
-                        spacing: 8,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    spacing: 10,
+                    children: [
+                      IconButton(
+                        style: IconButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: Icon(Icons.arrow_back_rounded),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: <Widget>[
-                          Material(
-                            elevation: 4,
-                            borderRadius: BorderRadius.circular(15),
-                            child: TextField(
-                              controller: _nameController,
-                              focusNode: _focusNode,
-                              cursorColor: AppTheme.gradient1,
-                              style: TextStyle(fontSize: 16),
-                              onSubmitted: (name) {},
-                              decoration: InputDecoration(
-                                hintText: _userName,
-                                hintStyle: TextStyle(fontSize: 16),
-                                labelText: 'Enter a Username',
-                                floatingLabelBehavior:
-                                    FloatingLabelBehavior.always,
-                                border: _border,
-                                enabledBorder: _border,
-                                focusedBorder: _focusedBorder,
-                                contentPadding: EdgeInsets.symmetric(
-                                  vertical: 16,
-                                  horizontal: 18,
-                                ),
-                              ),
-                            ),
-                          ),
+                        children: [
                           Text(
-                            'Choose a profile',
-                            style: TextStyle(fontSize: 18),
-                          ),
-                          Container(
-                            margin: (Platform.isAndroid || Platform.isIOS)
-                                ? null
-                                : EdgeInsets.symmetric(horizontal: 150),
-                            child: SingleChildScrollView(
-                              child: Wrap(
-                                alignment: WrapAlignment.spaceEvenly,
-                                spacing: 15,
-                                runSpacing: 15,
-                                children: List.generate(_assetsPath.length, (
-                                  index,
-                                ) {
-                                  final asset = _assetsPath.elementAt(index);
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _focusNode.unfocus();
-                                        _changeUserProfile(index);
-                                      });
-                                    },
-                                    child: Container(
-                                      height:
-                                          (Platform.isAndroid || Platform.isIOS)
-                                          ? size.width / 4
-                                          : 125,
-                                      width:
-                                          (Platform.isAndroid || Platform.isIOS)
-                                          ? size.width / 4
-                                          : 125,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: _currentProfileChoice == index
-                                            ? Border.all(
-                                                color: AppTheme.gradient1,
-                                                width: 5,
-                                              )
-                                            : null,
-                                      ),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(
-                                          125,
-                                        ),
-                                        child: Image.asset(
-                                          asset,
-                                          height: 95,
-                                          width: 95,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              ),
+                            'SETTINGS',
+                            style: TextStyle(
+                              letterSpacing: 2,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: AppTheme.gradient1,
                             ),
                           ),
-                          SizedBox(),
+                          const Text(
+                            'Edit Profile',
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
                         ],
+                      ),
+                    ],
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _changeUserName(
+                          _nameController.text.trim().isEmpty
+                              ? _userName
+                              : _nameController.text.trim(),
+                        );
+                      });
+                      Toast(
+                        context: context,
+                        title: 'Profile Updated',
+                        description:
+                            'All right we will call you ${_nameController.text.trim()} from now on',
+                        type: ToastificationType.success,
+                      );
+                      Navigator.pop(context, true);
+                    },
+                    child: Text(
+                      'Done',
+                      style: TextStyle(
+                        color: AppTheme.gradient1,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 100,
+                        width: 100,
+                        decoration: BoxDecoration(shape: BoxShape.circle),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(100),
+                          child: Image.asset(
+                            _userProfile,
+                            height: 95,
+                            width: 95,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      Text(
+                        _userName,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.gradient1,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          _focusNode.unfocus();
+                        },
+                        child: SingleChildScrollView(
+                          child: Container(
+                            width: size.width,
+                            padding: EdgeInsets.symmetric(horizontal: 30),
+                            child: Column(
+                              spacing: 8,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: <Widget>[
+                                Material(
+                                  elevation: 4,
+                                  borderRadius: BorderRadius.circular(15),
+                                  child: TextField(
+                                    controller: _nameController,
+                                    focusNode: _focusNode,
+                                    cursorColor: AppTheme.gradient1,
+                                    style: TextStyle(fontSize: 16),
+                                    onSubmitted: (name) {},
+                                    decoration: InputDecoration(
+                                      hintText: _userName,
+                                      hintStyle: TextStyle(fontSize: 16),
+                                      labelText: 'Enter a Username',
+                                      labelStyle: TextStyle(color: AppTheme.gradient1),
+                                      floatingLabelBehavior:
+                                          FloatingLabelBehavior.always,
+                                      border: _border,
+                                      enabledBorder: _border,
+                                      focusedBorder: _focusedBorder,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        vertical: 16,
+                                        horizontal: 18,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  'Choose a profile',
+                                  style: TextStyle(fontSize: 18),
+                                ),
+                                Container(
+                                  margin: (Platform.isAndroid || Platform.isIOS)
+                                      ? null
+                                      : EdgeInsets.symmetric(horizontal: 150),
+                                  child: SingleChildScrollView(
+                                    child: Wrap(
+                                      alignment: WrapAlignment.spaceEvenly,
+                                      spacing: 15,
+                                      runSpacing: 15,
+                                      children: List.generate(
+                                        _assetsPath.length,
+                                        (index) {
+                                          final asset = _assetsPath.elementAt(
+                                            index,
+                                          );
+                                          return GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                _focusNode.unfocus();
+                                                _changeUserProfile(index);
+                                              });
+                                            },
+                                            child: Container(
+                                              height:
+                                                  (Platform.isAndroid ||
+                                                      Platform.isIOS)
+                                                  ? size.width / 4
+                                                  : 125,
+                                              width:
+                                                  (Platform.isAndroid ||
+                                                      Platform.isIOS)
+                                                  ? size.width / 4
+                                                  : 125,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                border:
+                                                    _currentProfileChoice ==
+                                                        index
+                                                    ? Border.all(
+                                                        color:
+                                                            AppTheme.gradient1,
+                                                        width: 5,
+                                                      )
+                                                    : null,
+                                              ),
+                                              child: ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(125),
+                                                child: Image.asset(
+                                                  asset,
+                                                  height: 95,
+                                                  width: 95,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -568,110 +647,149 @@ class _SetDarkModeState extends ConsumerState<SetDarkMode> {
     final availableWidth = (MediaQuery.sizeOf(context).width - 48);
     final accentColor = ref.watch(themeModeProvider.notifier).getAccentColor();
     return Scaffold(
-      appBar: AppBar(
-        leading: InkWell(
-          onTap: () {
-            Navigator.pop(context);
-          },
-          child: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
-        ),
-        title: Text(
-          'Set App Theme',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Choose your app theme:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                spacing: 10,
                 children: [
-                  ThemeChoice(
-                    currentThemeChoice: selectedMode,
-                    title: 'Light Mode',
-                    titleTextColor: AppTheme.blackGradient,
-                    themeColor: AppTheme.whiteGradient,
-                    themeMode: 0,
-                    onTap: () {
-                      _setThemeMode(0);
-                    },
+                  IconButton(
+                    style: IconButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: Icon(Icons.arrow_back_rounded),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  ThemeChoice(
-                    currentThemeChoice: selectedMode,
-                    title: 'Dark Mode',
-                    titleTextColor: AppTheme.whiteGradient,
-                    themeColor: AppTheme.blackGradient,
-                    themeMode: 1,
-                    onTap: () {
-                      _setThemeMode(1);
-                    },
-                  ),
-                  ThemeChoice(
-                    currentThemeChoice: selectedMode,
-                    title: 'System Choice',
-                    themeColor: Theme.brightnessOf(context) == Brightness.light
-                        ? AppTheme.whiteGradient
-                        : AppTheme.blackGradient,
-                    titleTextColor:
-                        Theme.brightnessOf(context) == Brightness.dark
-                        ? AppTheme.whiteGradient
-                        : AppTheme.blackGradient,
-                    themeMode: 2,
-                    onTap: () {
-                      _setThemeMode(2);
-                    },
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SETTINGS',
+                        style: TextStyle(
+                          letterSpacing: 2,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: AppTheme.gradient1,
+                        ),
+                      ),
+                      const Text(
+                        'Set App Theme',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              SizedBox(height: 24),
-              Text(
-                'Choose an accent color:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              Expanded(
-                child: GridView.count(
-                  padding: EdgeInsets.only(top: 8),
-                  crossAxisCount: (Platform.isAndroid || Platform.isIOS)
-                      ? (availableWidth ~/ 75).clamp(1, 6)
-                      : 15,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  children: AccentColors.accentColors.map((color) {
-                    return Stack(
-                      alignment: Alignment.center,
+            ),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Choose your app theme:',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        GestureDetector(
+                        ThemeChoice(
+                          currentThemeChoice: selectedMode,
+                          title: 'Light Mode',
+                          titleTextColor: AppTheme.blackGradient,
+                          themeColor: AppTheme.whiteGradient,
+                          themeMode: 0,
                           onTap: () {
-                            setState(() {
-                              _setAccentColor(color);
-                            });
+                            _setThemeMode(0);
                           },
-                          child: Container(
-                            height: 75,
-                            width: 75,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: color,
-                            ),
-                          ),
                         ),
-                        if (color.toARGB32() == accentColor.toARGB32())
-                          Icon(Icons.done, size: 50),
+                        ThemeChoice(
+                          currentThemeChoice: selectedMode,
+                          title: 'Dark Mode',
+                          titleTextColor: AppTheme.whiteGradient,
+                          themeColor: AppTheme.blackGradient,
+                          themeMode: 1,
+                          onTap: () {
+                            _setThemeMode(1);
+                          },
+                        ),
+                        ThemeChoice(
+                          currentThemeChoice: selectedMode,
+                          title: 'System Choice',
+                          themeColor:
+                              Theme.brightnessOf(context) == Brightness.light
+                              ? AppTheme.whiteGradient
+                              : AppTheme.blackGradient,
+                          titleTextColor:
+                              Theme.brightnessOf(context) == Brightness.dark
+                              ? AppTheme.whiteGradient
+                              : AppTheme.blackGradient,
+                          themeMode: 2,
+                          onTap: () {
+                            _setThemeMode(2);
+                          },
+                        ),
                       ],
-                    );
-                  }).toList(),
+                    ),
+                    SizedBox(height: 24),
+                    Text(
+                      'Choose an accent color:',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Expanded(
+                      child: GridView.count(
+                        padding: EdgeInsets.only(top: 8),
+                        crossAxisCount: (Platform.isAndroid || Platform.isIOS)
+                            ? (availableWidth ~/ 75).clamp(1, 6)
+                            : 15,
+                        mainAxisSpacing: 10,
+                        crossAxisSpacing: 10,
+                        children: AccentColors.accentColors.map((color) {
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _setAccentColor(color);
+                                  });
+                                },
+                                child: Container(
+                                  height: 75,
+                                  width: 75,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: color,
+                                  ),
+                                ),
+                              ),
+                              if (color.toARGB32() == accentColor.toARGB32())
+                                Icon(Icons.done, size: 50),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -818,170 +936,217 @@ class _WatchHistoryState extends State<WatchHistory> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: InkWell(
-          onTap: () => Navigator.pop(context),
-          child: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
-        ),
-        title: Text(
-          'Watch History',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actionsPadding: EdgeInsets.only(right: 10),
-        actions: [
-          IconButton(
-            onPressed: _popUpDeleteConfirmation,
-            icon: Text(
-              'Clear',
-              style: TextStyle(
-                color: AppTheme.gradient1,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
       body: SafeArea(
-        child: ValueListenableBuilder(
-          valueListenable: Hive.box('library').listenable(),
-          builder: (context, _, __) {
-            final items = _buildHistoryItems();
-            if (items.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.movie, size: 64, color: AppTheme.gradient1),
-                    SizedBox(height: 16),
-                    Text(
-                      'No watch history yet',
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    spacing: 10,
+                    children: [
+                      IconButton(
+                        style: IconButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: Icon(Icons.arrow_back_rounded),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'SETTINGS',
+                            style: TextStyle(
+                              letterSpacing: 2,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: AppTheme.gradient1,
+                            ),
+                          ),
+                          const Text(
+                            'Watch History',
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  TextButton(
+                    onPressed: _popUpDeleteConfirmation,
+                    child: Text(
+                      'Clear',
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
                         color: AppTheme.gradient1,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 8),
-                    Text('Watch episodes to build your history and stats.'),
-                  ],
-                ),
-              );
-            }
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: ValueListenableBuilder(
+                valueListenable: Hive.box('library').listenable(),
+                builder: (context, _, _) {
+                  final items = _buildHistoryItems();
+                  if (items.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.movie,
+                            size: 64,
+                            color: AppTheme.gradient1,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'No watch history yet',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.gradient1,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Watch episodes to build your history and stats.',
+                          ),
+                        ],
+                      ),
+                    );
+                  }
 
-            final int maxCount = items.first.totalCount;
+                  final int maxCount = items.first.totalCount;
 
-            return ListView.separated(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final it = items[index];
-                final progress = maxCount > 0
-                    ? (it.totalCount / maxCount)
-                    : 0.0;
+                  return ListView.separated(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    itemCount: items.length,
+                    separatorBuilder: (_, _) => SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final it = items[index];
+                      final progress = maxCount > 0
+                          ? (it.totalCount / maxCount)
+                          : 0.0;
 
-                return GestureDetector(
-                  onTap: () {
-                    if (it.anime != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) {
-                            return AnimeDetailsPage(animeSlug: it.slug);
-                          },
-                        ),
-                      );
-                    }
-                  },
-                  child: Container(
-                    margin: EdgeInsets.symmetric(horizontal: 12),
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: AppTheme.blackGradient.withAlpha(30),
-                    ),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: it.anime != null
-                              ? CachedNetworkImage(
-                                  imageUrl: it.anime!.image,
-                                  width: 96,
-                                  height: 96,
-                                  fit: BoxFit.cover,
-                                  placeholder: (c, u) => Container(
-                                    color: AppTheme.greyGradient,
-                                    width: 96,
-                                    height: 96,
-                                  ),
-                                )
-                              : Container(
-                                  width: 96,
-                                  height: 96,
-                                  color: AppTheme.greyGradient,
-                                ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      return GestureDetector(
+                        onTap: () {
+                          if (it.anime != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) {
+                                  return AnimeDetailsPage(animeSlug: it.slug);
+                                },
+                              ),
+                            );
+                          }
+                        },
+                        child: Container(
+                          margin: EdgeInsets.symmetric(horizontal: 12),
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: AppTheme.cardColor(context).withAlpha(150),
+                          ),
+                          child: Row(
                             children: [
-                              Text(
-                                it.anime?.title ?? it.slug,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.visibility,
-                                    size: 14,
-                                    color: AppTheme.gradient1,
-                                  ),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    '${it.totalCount} view${it.totalCount == 1 ? '' : 's'}',
-                                    style: TextStyle(color: AppTheme.gradient1),
-                                  ),
-                                  SizedBox(width: 12),
-                                ],
-                              ),
-                              SizedBox(height: 8),
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: LinearProgressIndicator(
-                                  value: progress.clamp(0.0, 1.0),
-                                  minHeight: 6,
-                                  backgroundColor: AppTheme.whiteGradient
-                                      .withAlpha(100),
-                                  valueColor: AlwaysStoppedAnimation(
-                                    AppTheme.gradient1,
-                                  ),
-                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                child: it.anime != null
+                                    ? CachedNetworkImage(
+                                        imageUrl: it.anime!.image,
+                                        width: 96,
+                                        height: 96,
+                                        fit: BoxFit.cover,
+                                        placeholder: (c, u) => Container(
+                                          color: AppTheme.greyGradient,
+                                          width: 96,
+                                          height: 96,
+                                        ),
+                                      )
+                                    : Container(
+                                        width: 96,
+                                        height: 96,
+                                        color: AppTheme.greyGradient,
+                                      ),
                               ),
-                              SizedBox(height: 6),
-                              Text(
-                                '${it.distinctEpisodes} episode${it.distinctEpisodes == 1 ? '' : 's'} watched',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.whiteGradient.withAlpha(150),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      it.anime?.title ?? it.slug,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.visibility,
+                                          size: 14,
+                                          color: AppTheme.gradient1,
+                                        ),
+                                        SizedBox(width: 6),
+                                        Text(
+                                          '${it.totalCount} view${it.totalCount == 1 ? '' : 's'}',
+                                          style: TextStyle(
+                                            color: AppTheme.gradient1,
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                      ],
+                                    ),
+                                    SizedBox(height: 8),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: LinearProgressIndicator(
+                                        value: progress.clamp(0.0, 1.0),
+                                        minHeight: 6,
+                                        backgroundColor: AppTheme.whiteGradient
+                                            .withAlpha(100),
+                                        valueColor: AlwaysStoppedAnimation(
+                                          AppTheme.gradient1,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(height: 6),
+                                    Text(
+                                      '${it.distinctEpisodes} episode${it.distinctEpisodes == 1 ? '' : 's'} watched',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.whiteGradient.withAlpha(
+                                          150,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-          },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1071,169 +1236,207 @@ class _UserTopAnimesState extends State<UserTopAnimes> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: InkWell(
-          onTap: () => Navigator.pop(context),
-          child: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
-        ),
-        title: Text(
-          "${widget.userName}'s Top Animes",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actionsPadding: EdgeInsets.only(right: 10),
-      ),
       body: SafeArea(
-        child: ValueListenableBuilder(
-          valueListenable: Hive.box('library').listenable(),
-          builder: (context, box, _) {
-            final items = _buildTopList();
-            if (items.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.favorite_border,
-                      size: 72,
-                      color: AppTheme.gradient1,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                spacing: 10,
+                children: [
+                  IconButton(
+                    style: IconButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
                     ),
-                    SizedBox(height: 12),
-                    Text(
-                      'No viewing history yet',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.gradient1,
+                    icon: Icon(Icons.arrow_back_rounded),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SETTINGS',
+                        style: TextStyle(
+                          letterSpacing: 2,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: AppTheme.gradient1,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 6),
-                    Text('Watch some episodes to see your top animes.'),
-                  ],
-                ),
-              );
-            }
-
-            final int maxCount = items.first.totalCount;
-
-            return ListView.separated(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final it = items[index];
-                final progress = maxCount > 0
-                    ? (it.totalCount / maxCount)
-                    : 0.0;
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) {
-                          return AnimeDetailsPage(animeSlug: it.slug);
-                        },
+                      Text(
+                        "${widget.userName}'s Top Animes",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
                       ),
-                    );
-                  },
-                  child: Container(
-                    margin: EdgeInsets.symmetric(horizontal: 12),
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: AppTheme.blackGradient.withAlpha(30),
-                    ),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: CachedNetworkImage(
-                            imageUrl: it.anime.image,
-                            width: 96,
-                            height: 96,
-                            fit: BoxFit.cover,
-                            placeholder: (c, u) => Container(
-                              color: AppTheme.greyGradient,
-                              width: 96,
-                              height: 96,
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: ValueListenableBuilder(
+                valueListenable: Hive.box('library').listenable(),
+                builder: (context, box, _) {
+                  final items = _buildTopList();
+                  if (items.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.favorite_border,
+                            size: 72,
+                            color: AppTheme.gradient1,
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            'No viewing history yet',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.gradient1,
                             ),
                           ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          SizedBox(height: 6),
+                          Text('Watch some episodes to see your top animes.'),
+                        ],
+                      ),
+                    );
+                  }
+
+                  final int maxCount = items.first.totalCount;
+
+                  return ListView.separated(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    itemCount: items.length,
+                    separatorBuilder: (_, _) => SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final it = items[index];
+                      final progress = maxCount > 0
+                          ? (it.totalCount / maxCount)
+                          : 0.0;
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) {
+                                return AnimeDetailsPage(animeSlug: it.slug);
+                              },
+                            ),
+                          );
+                        },
+                        child: Container(
+                          margin: EdgeInsets.symmetric(horizontal: 12),
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: AppTheme.cardColor(context).withAlpha(150),
+                          ),
+                          child: Row(
                             children: [
-                              Text(
-                                it.anime.title,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.visibility,
-                                    size: 14,
-                                    color: AppTheme.gradient1,
-                                  ),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    '${it.totalCount} view${it.totalCount == 1 ? '' : 's'}',
-                                    style: TextStyle(color: AppTheme.gradient1),
-                                  ),
-                                  SizedBox(width: 12),
-                                  if (it.topEpisodeId != null) ...[
-                                    Icon(
-                                      Icons.play_arrow,
-                                      size: 14,
-                                      color: AppTheme.gradient1,
-                                    ),
-                                    SizedBox(width: 6),
-                                  ],
-                                ],
-                              ),
-                              SizedBox(height: 8),
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: LinearProgressIndicator(
-                                  value: progress.clamp(0.0, 1.0),
-                                  minHeight: 6,
-                                  backgroundColor: AppTheme.whiteGradient
-                                      .withAlpha(100),
-                                  valueColor: AlwaysStoppedAnimation(
-                                    AppTheme.gradient1,
+                                borderRadius: BorderRadius.circular(8),
+                                child: CachedNetworkImage(
+                                  imageUrl: it.anime.image,
+                                  width: 96,
+                                  height: 96,
+                                  fit: BoxFit.cover,
+                                  placeholder: (c, u) => Container(
+                                    color: AppTheme.greyGradient,
+                                    width: 96,
+                                    height: 96,
                                   ),
                                 ),
                               ),
-                              SizedBox(height: 6),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      it.anime.title,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.visibility,
+                                          size: 14,
+                                          color: AppTheme.gradient1,
+                                        ),
+                                        SizedBox(width: 6),
+                                        Text(
+                                          '${it.totalCount} view${it.totalCount == 1 ? '' : 's'}',
+                                          style: TextStyle(
+                                            color: AppTheme.gradient1,
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                        if (it.topEpisodeId != null) ...[
+                                          Icon(
+                                            Icons.play_arrow,
+                                            size: 14,
+                                            color: AppTheme.gradient1,
+                                          ),
+                                          SizedBox(width: 6),
+                                        ],
+                                      ],
+                                    ),
+                                    SizedBox(height: 8),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: LinearProgressIndicator(
+                                        value: progress.clamp(0.0, 1.0),
+                                        minHeight: 6,
+                                        backgroundColor: AppTheme.whiteGradient
+                                            .withAlpha(100),
+                                        valueColor: AlwaysStoppedAnimation(
+                                          AppTheme.gradient1,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(height: 6),
+                                    Text(
+                                      '${it.episodeCount} distinct episode${it.episodeCount == 1 ? '' : 's'} watched',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.whiteGradient.withAlpha(
+                                          150,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 8),
                               Text(
-                                '${it.episodeCount} distinct episode${it.episodeCount == 1 ? '' : 's'} watched',
+                                '#${index + 1}',
                                 style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.whiteGradient.withAlpha(150),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.gradient1,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        SizedBox(width: 8),
-                        Text(
-                          '#${index + 1}',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.gradient1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-          },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1251,22 +1454,54 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: InkWell(
-          onTap: () {
-            Navigator.pop(context);
-          },
-          child: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
-        ),
-        title: Text(
-          'Privacy Policy',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
       body: SafeArea(
-        child: Markdown(
-          data: PrivacyPolicy.privacyPolicy,
-          styleSheet: MarkdownStyleSheet(h2: TextStyle(fontSize: 16)),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                spacing: 10,
+                children: [
+                  IconButton(
+                    style: IconButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: Icon(Icons.arrow_back_rounded),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SETTINGS',
+                        style: TextStyle(
+                          letterSpacing: 2,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: AppTheme.gradient1,
+                        ),
+                      ),
+                      const Text(
+                        'Privacy Policy',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Markdown(
+                data: PrivacyPolicy.privacyPolicy,
+                styleSheet: MarkdownStyleSheet(h2: TextStyle(fontSize: 16)),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1312,172 +1547,220 @@ class ChangelogPage extends StatelessWidget {
     final entries = _sortedEntries(raw);
 
     return Scaffold(
-      appBar: AppBar(
-        leading: InkWell(
-          onTap: () {
-            Navigator.pop(context);
-          },
-          child: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
-        ),
-        title: Text('Changelog', style: TextStyle(fontWeight: FontWeight.bold)),
-        elevation: 0,
-      ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-          child: ListView.separated(
-            itemCount: entries.length,
-            separatorBuilder: (_, __) => SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final key = entries[index].key;
-              final data = entries[index].value;
-              final title = (data is Map && data['title'] != null)
-                  ? data['title'].toString()
-                  : key;
-              final date = (data is Map && data['date'] != null)
-                  ? data['date'].toString()
-                  : null;
-              final notes = (data is Map && data['notes'] is List)
-                  ? List<String>.from(data['notes'])
-                  : <String>[];
-              final isLatest = (data is Map && data['latest'] != null);
-
-              return Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ExpansionTile(
-                  tilePadding: EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                spacing: 10,
+                children: [
+                  IconButton(
+                    style: IconButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: Icon(Icons.arrow_back_rounded),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  collapsedIconColor: AppTheme.gradient1,
-                  iconColor: AppTheme.gradient1,
-                  title: Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      Text(
+                        'ABOUT',
+                        style: TextStyle(
+                          letterSpacing: 2,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: AppTheme.gradient1,
+                        ),
+                      ),
+                      const Text(
+                        'Changelog',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 10,
+                ),
+                child: ListView.separated(
+                  itemCount: entries.length,
+                  separatorBuilder: (_, _) => SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final key = entries[index].key;
+                    final data = entries[index].value;
+                    final title = (data is Map && data['title'] != null)
+                        ? data['title'].toString()
+                        : key;
+                    final date = (data is Map && data['date'] != null)
+                        ? data['date'].toString()
+                        : null;
+                    final notes = (data is Map && data['notes'] is List)
+                        ? List<String>.from(data['notes'])
+                        : <String>[];
+                    final isLatest = (data is Map && data['latest'] != null);
+
+                    return Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ExpansionTile(
+                        tilePadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        collapsedIconColor: AppTheme.gradient1,
+                        iconColor: AppTheme.gradient1,
+                        title: Row(
                           children: [
-                            Text(
-                              title,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (date != null) ...[
-                              SizedBox(height: 4),
-                              Row(
-                                spacing: 8,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(date, style: TextStyle(fontSize: 12)),
-                                  if (isLatest)
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.primaryGreen.withValues(
-                                          alpha: 0.25,
-                                        ),
-                                        border: Border.all(
-                                          color: AppTheme.primaryGreen,
-                                          width: 0.5,
-                                        ),
-                                        borderRadius: BorderRadius.circular(5),
-                                      ),
-                                      child: Text(
-                                        'Latest',
-                                        style: TextStyle(fontSize: 14),
-                                      ),
+                                  Text(
+                                    title,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
                                     ),
+                                  ),
+                                  if (date != null) ...[
+                                    SizedBox(height: 4),
+                                    Row(
+                                      spacing: 8,
+                                      children: [
+                                        Text(
+                                          date,
+                                          style: TextStyle(fontSize: 12),
+                                        ),
+                                        if (isLatest)
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.primaryGreen
+                                                  .withValues(alpha: 0.25),
+                                              border: Border.all(
+                                                color: AppTheme.primaryGreen,
+                                                width: 0.5,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(5),
+                                            ),
+                                            child: Text(
+                                              'Latest',
+                                              style: TextStyle(fontSize: 14),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
                                 ],
                               ),
-                            ],
+                            ),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.gradient1.withAlpha(30),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                key,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
-                      ),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
+                        childrenPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
                         ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.gradient1.withAlpha(30),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          key,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  childrenPadding: EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  children: [
-                    if (notes.isNotEmpty) ...[
-                      SizedBox(height: 8),
-                      ...notes.map(
-                        (n) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '• ',
-                                style: TextStyle(fontSize: 18, height: 1.3),
+                        children: [
+                          if (notes.isNotEmpty) ...[
+                            SizedBox(height: 8),
+                            ...notes.map(
+                              (n) => Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '• ',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                    Expanded(child: Text(n)),
+                                  ],
+                                ),
                               ),
-                              Expanded(child: Text(n)),
+                            ),
+                            SizedBox(height: 6),
+                          ],
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton.icon(
+                                onPressed: () {
+                                  final buffer = StringBuffer();
+                                  buffer.writeln(title);
+                                  if (date != null) buffer.writeln(date);
+                                  if (notes.isNotEmpty) {
+                                    buffer.writeln("\nWhat's new:");
+                                    for (final n in notes) {
+                                      buffer.writeln('- $n');
+                                    }
+                                  }
+                                  Clipboard.setData(
+                                    ClipboardData(text: buffer.toString()),
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Copied changelog to clipboard',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: Icon(
+                                  Icons.copy,
+                                  color: AppTheme.gradient1,
+                                ),
+                                label: Text(
+                                  'Copy',
+                                  style: TextStyle(color: AppTheme.gradient1),
+                                ),
+                              ),
                             ],
                           ),
-                        ),
+                        ],
                       ),
-                      SizedBox(height: 6),
-                    ],
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton.icon(
-                          onPressed: () {
-                            final buffer = StringBuffer();
-                            buffer.writeln(title);
-                            if (date != null) buffer.writeln(date);
-                            if (notes.isNotEmpty) {
-                              buffer.writeln("\nWhat's new:");
-                              for (final n in notes) {
-                                buffer.writeln('- $n');
-                              }
-                            }
-                            Clipboard.setData(
-                              ClipboardData(text: buffer.toString()),
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Copied changelog to clipboard'),
-                              ),
-                            );
-                          },
-                          icon: Icon(Icons.copy, color: AppTheme.gradient1),
-                          label: Text(
-                            'Copy',
-                            style: TextStyle(color: AppTheme.gradient1),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              );
-            },
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1741,86 +2024,126 @@ class _ManageAppDataState extends State<ManageAppData> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: InkWell(
-          onTap: () {
-            Navigator.pop(context);
-          },
-          child: Icon(Icons.arrow_back_ios, color: AppTheme.gradient1),
-        ),
-        title: Text(
-          'Manage App Data',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
       body: SafeArea(
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 25),
-          child: Column(
-            spacing: 8,
-            children: [
-              SizedBox(height: 10),
-              ListTile(
-                tileColor: AppTheme.blackGradient,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadiusGeometry.circular(10),
-                ),
-                leading: _isBackingUp
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                spacing: 10,
+                children: [
+                  IconButton(
+                    style: IconButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: Icon(Icons.arrow_back_rounded),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SETTINGS',
+                        style: TextStyle(
+                          letterSpacing: 2,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
                           color: AppTheme.gradient1,
                         ),
-                      )
-                    : Icon(Icons.backup, size: 18, color: AppTheme.gradient1),
-                title: Text('Backup App Data'),
-                subtitle: Text('Save all your data to a file'),
-                trailing: _isBackingUp
-                    ? null
-                    : Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: _isBackingUp ? null : _backupData,
-              ),
-              ListTile(
-                tileColor: AppTheme.blackGradient,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadiusGeometry.circular(10),
-                ),
-                leading: _isRestoring
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppTheme.gradient1,
+                      ),
+                      const Text(
+                        'Manage Data',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
                         ),
-                      )
-                    : Icon(Icons.restore, size: 18, color: AppTheme.gradient1),
-                title: Text('Restore from Backup'),
-                subtitle: Text('Load data from a backup file'),
-                trailing: _isRestoring
-                    ? null
-                    : Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: _isRestoring ? null : _restoreData,
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              ListTile(
-                tileColor: AppTheme.blackGradient,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadiusGeometry.circular(10),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: 25),
+                child: Column(
+                  spacing: 8,
+                  children: [
+                    SizedBox(height: 10),
+                    ListTile(
+                      tileColor: AppTheme.cardColor(context).withAlpha(100),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      leading: _isBackingUp
+                          ? SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppTheme.gradient1,
+                              ),
+                            )
+                          : Icon(
+                              Icons.backup,
+                              size: 18,
+                              color: AppTheme.gradient1,
+                            ),
+                      title: Text('Backup App Data'),
+                      subtitle: Text('Save all your data to a file'),
+                      trailing: _isBackingUp
+                          ? null
+                          : Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: _isBackingUp ? null : _backupData,
+                    ),
+                    ListTile(
+                      tileColor: AppTheme.cardColor(context).withAlpha(100),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadiusGeometry.circular(10),
+                      ),
+                      leading: _isRestoring
+                          ? SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppTheme.gradient1,
+                              ),
+                            )
+                          : Icon(
+                              Icons.restore,
+                              size: 18,
+                              color: AppTheme.gradient1,
+                            ),
+                      title: Text('Restore from Backup'),
+                      subtitle: Text('Load data from a backup file'),
+                      trailing: _isRestoring
+                          ? null
+                          : Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: _isRestoring ? null : _restoreData,
+                    ),
+                    ListTile(
+                      tileColor: AppTheme.cardColor(context).withAlpha(100),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadiusGeometry.circular(10),
+                      ),
+                      leading: Icon(
+                        Icons.delete,
+                        size: 18,
+                        color: AppTheme.gradient1,
+                      ),
+                      title: Text('Clear App Data'),
+                      subtitle: Text('Delete all local data'),
+                      trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: _clearData,
+                    ),
+                  ],
                 ),
-                leading: Icon(
-                  Icons.delete,
-                  size: 18,
-                  color: AppTheme.gradient1,
-                ),
-                title: Text('Clear App Data'),
-                subtitle: Text('Delete all local data'),
-                trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: _clearData,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

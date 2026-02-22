@@ -5,7 +5,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/core/utils/search_history_box_function.dart';
-import 'package:shinobihaven/core/utils/user_box_functions.dart';
 import 'package:shinobihaven/features/anime/common/view/widgets/anime_card.dart';
 import 'package:shinobihaven/features/anime/details/view/pages/anime_details_page.dart';
 import 'package:shinobihaven/features/anime/discovery/dependency_injection/search_provider.dart';
@@ -21,15 +20,6 @@ class SearchPage extends ConsumerStatefulWidget {
 class _SearchPageState extends ConsumerState<SearchPage> {
   late final TextEditingController _searchController;
   late final FocusNode _focusNode;
-
-  final OutlineInputBorder _border = OutlineInputBorder(
-    borderSide: BorderSide(color: AppTheme.whiteGradient),
-    borderRadius: BorderRadius.circular(15),
-  );
-  final OutlineInputBorder _focusedBorder = OutlineInputBorder(
-    borderSide: BorderSide(color: AppTheme.gradient1),
-    borderRadius: BorderRadius.circular(15),
-  );
 
   List _searchHistory = [];
   bool _isSearching = false;
@@ -75,436 +65,285 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     super.dispose();
   }
 
-  Widget _buildSearchResults() {
-    final searchResults = ref.watch(searchViewModelProvider);
+  @override
+  Widget build(BuildContext context) {
+    final searchSuggestions = ref.watch(searchSuggestionsViewModelProvider);
 
-    return searchResults.when(
-      data: (searchData) {
-        if (searchData.animes.isEmpty) {
-          return Container(
-            height: 100,
-            margin: EdgeInsets.only(top: 80, right: 15, left: 15),
-            padding: EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              color: UserBoxFunctions.isDarkMode(context)
-                  ? AppTheme.blackGradient
-                  : AppTheme.whiteGradient,
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: AppTheme.gradient1),
-            ),
-            child: Center(
-              child: Text(
-                'No results found',
-                style: TextStyle(color: AppTheme.gradient1, fontSize: 16),
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildSearchBar(),
+            Expanded(
+              child: Stack(
+                children: [
+                  _buildContent(searchSuggestions),
+                  if (_isSearching) _buildSearchResultsOverlay(),
+                ],
               ),
             ),
-          );
-        }
-
-        return Container(
-          height: 250,
-          margin: EdgeInsets.only(top: 80, right: 15, left: 15),
-          padding: EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: UserBoxFunctions.isDarkMode(context)
-                ? AppTheme.blackGradient
-                : AppTheme.whiteGradient,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: AppTheme.gradient1),
-          ),
-          child: ListView.builder(
-            itemCount: searchData.animes.take(5).length,
-            itemBuilder: (context, index) {
-              final anime = searchData.animes[index];
-              return ListTile(
-                contentPadding: EdgeInsets.only(bottom: 5, left: 10, right: 10),
-                leading: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: anime.image,
-                    width: 40,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    errorWidget: (context, error, stackTrace) {
-                      return Container(
-                        width: 40,
-                        height: 60,
-                        color: AppTheme.gradient1.withAlpha(50),
-                        child: Icon(Icons.error, color: AppTheme.gradient1),
-                      );
-                    },
-                  ),
-                ),
-                title: Text(
-                  anime.title,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onTap: () {
-                  _searchController.text = anime.title;
-                  setState(() {
-                    _isSearching = false;
-                  });
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          AnimeDetailsPage(animeSlug: anime.slug,),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        );
-      },
-      loading: () => Container(
-        height: 100,
-        margin: EdgeInsets.only(top: 80, right: 15, left: 15),
-        decoration: BoxDecoration(
-          color: UserBoxFunctions.isDarkMode(context)
-              ? AppTheme.blackGradient
-              : AppTheme.whiteGradient,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: AppTheme.gradient1),
-        ),
-        child: Center(
-          child: CircularProgressIndicator(color: AppTheme.gradient1),
-        ),
-      ),
-      error: (error, stackTrace) => Container(
-        height: 100,
-        margin: EdgeInsets.only(top: 80, right: 15, left: 15),
-        decoration: BoxDecoration(
-          color: UserBoxFunctions.isDarkMode(context)
-              ? AppTheme.blackGradient
-              : AppTheme.whiteGradient,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: AppTheme.gradient1),
-        ),
-        child: Center(
-          child: Text(
-            'Error loading results',
-            style: TextStyle(color: AppTheme.gradient1, fontSize: 16),
-          ),
+          ],
         ),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    final searchSuggestions = ref.watch(searchSuggestionsViewModelProvider);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Search', style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
-      body: ValueListenableBuilder(
-        valueListenable: Hive.box('history').listenable(),
-        builder: (context, value, child) {
-          SearchHistoryBoxFunction.loadHistory();
-          return SafeArea(
-            child: Stack(
-              children: [
-                Container(
-                  height: size.height,
-                  width: size.width,
-                  padding: EdgeInsets.symmetric(horizontal: 15),
-                  child: Column(
-                    children: [
-                      SizedBox(height: 20),
-                      Material(
-                        elevation: 4,
-                        borderRadius: BorderRadius.circular(15),
-                        child: TextField(
-                          controller: _searchController,
-                          focusNode: _focusNode,
-                          cursorColor: AppTheme.gradient1,
-                          style: TextStyle(fontSize: 16),
-                          onChanged: (query) {
-                            if (query.length > 2) {
-                              _searchAnime(query);
-                            } else {
-                              setState(() {
-                                _isSearching = false;
-                              });
-                            }
-                          },
-                          onSubmitted: (query) {
-                            setState(() {
-                              SearchHistoryBoxFunction.saveHistory(query);
-                              _searchHistory =
-                                  SearchHistoryBoxFunction.loadHistory();
-                              _isSearching = false;
-                            });
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) {
-                                  return SearchResultPage(
-                                    query: _searchController.text,
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                          decoration: InputDecoration(
-                            hintText: 'What Would You Like to Watch?',
-                            hintStyle: TextStyle(fontSize: 16),
-                            border: _border,
-                            enabledBorder: _border,
-                            focusedBorder: _focusedBorder,
-                            contentPadding: EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 18,
-                            ),
-                            suffixIcon: IconButton(
-                              onPressed: () {
-                                _searchController.clear();
-                                _focusNode.unfocus();
-                                setState(() {
-                                  _isSearching = false;
-                                });
-                              },
-                              icon: Icon(
-                                Icons.backspace,
-                                size: 20,
-                                color: AppTheme.gradient1,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 30),
-                      if (!_isSearching) ...[
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Search History',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.gradient1,
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        Expanded(
-                          child: _searchHistory.isNotEmpty
-                              ? SingleChildScrollView(
-                                  child: Wrap(
-                                    spacing: 8,
-                                    runSpacing: 5,
-                                    children: List.generate(_searchHistory.length, (
-                                      index,
-                                    ) {
-                                      final history = _searchHistory.elementAt(
-                                        index,
-                                      );
-                                      return InkWell(
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) {
-                                                return SearchResultPage(
-                                                  query: history,
-                                                );
-                                              },
-                                            ),
-                                          );
-                                        },
-                                        child: Chip(
-                                          labelPadding: EdgeInsets.symmetric(
-                                            horizontal: 2,
-                                            vertical: 2,
-                                          ),
-                                          label: Text(
-                                            history,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                          deleteIcon: Icon(
-                                            Icons.close,
-                                            size: 18,
-                                            color: AppTheme.gradient1,
-                                          ),
-                                          onDeleted: () {
-                                            SearchHistoryBoxFunction.deleteHistory(
-                                              history,
-                                            );
-                                            setState(() {
-                                              _searchHistory =
-                                                  SearchHistoryBoxFunction.loadHistory();
-                                            });
-                                          },
-                                        ),
-                                      );
-                                    }),
-                                  ),
-                                )
-                              : Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.search_off,
-                                        color: AppTheme.gradient1,
-                                        size: 48,
-                                      ),
-                                      SizedBox(height: 12),
-                                      Text(
-                                        'No History. Try searching something!',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppTheme.gradient1,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                        ),
-                        SizedBox(
-                          child: searchSuggestions.when(
-                            data: (suggestions) {
-                              return ExpansionTile(
-                                title: Text(
-                                  'Not sure what to watch?\nCheck out some of the trending animes',
-                                  style: TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.gradient1,
-                                  ),
-                                ),
-                                children: [
-                                  SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Row(
-                                      children: List.generate(
-                                        suggestions.length,
-                                        (index) {
-                                          final anime = suggestions.elementAt(
-                                            index,
-                                          );
-                                          return AnimeCard(
-                                            anime: anime,
-                                            size: Size(100, 150),
-                                            twoLineTitle: true,
-                                            textStyle: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(height: 10),
-                                ],
-                              );
-                            },
-                            error: (err, stack) => Container(
-                              alignment: Alignment.center,
-                              padding: EdgeInsets.symmetric(horizontal: 15),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.error,
-                                    color: AppTheme.gradient1,
-                                    size: 48,
-                                  ),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    'Failed to load suggestions\nTap the button to retry.',
-                                    style: TextStyle(
-                                      color: AppTheme.gradient1,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  SizedBox(height: 8),
-                                  ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.gradient1,
-                                      foregroundColor: AppTheme.whiteGradient,
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 24,
-                                        vertical: 12,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      ref
-                                          .read(
-                                            searchSuggestionsViewModelProvider
-                                                .notifier,
-                                          )
-                                          .getSearchSuggestions();
-                                    },
-                                    icon: Icon(Icons.refresh),
-                                    label: Text(
-                                      'Retry',
-                                      style: TextStyle(
-                                        color: AppTheme.whiteGradient,
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(height: 10),
-                                ],
-                              ),
-                            ),
-                            loading: () => Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Shimmer.fromColors(
-                                    baseColor: AppTheme.blackGradient,
-                                    highlightColor: AppTheme.gradient1
-                                        .withAlpha(77),
-                                    child: Icon(
-                                      Icons.search,
-                                      size: 72,
-                                      color: AppTheme.whiteGradient,
-                                    ),
-                                  ),
-                                  SizedBox(height: 18),
-                                  Shimmer.fromColors(
-                                    baseColor: AppTheme.blackGradient,
-                                    highlightColor: AppTheme.gradient1
-                                        .withAlpha(77),
-                                    child: Text(
-                                      'Loading...',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.whiteGradient,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            spacing: 10,
+            children: [
+              IconButton(
+                style: IconButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
                 ),
-                if (_isSearching) _buildSearchResults(),
-              ],
+                icon: Icon(Icons.arrow_back_rounded),
+                onPressed: () => Navigator.pop(context),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'DISCOVER',
+                    style: TextStyle(
+                      letterSpacing: 2,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: AppTheme.gradient1,
+                    ),
+                  ),
+                  const Text(
+                    'Find Anime',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+          Container(
+            decoration: AppTheme.premiumCard(context, radius: 20),
+            child: TextField(
+              controller: _searchController,
+              focusNode: _focusNode,
+              onChanged: (v) => v.length > 2
+                  ? _searchAnime(v)
+                  : setState(() => _isSearching = false),
+              onSubmitted: (query) {
+                if (query.isNotEmpty) {
+                  SearchHistoryBoxFunction.saveHistory(query);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SearchResultPage(query: query),
+                    ),
+                  );
+                }
+              },
+              cursorColor: AppTheme.gradient1,
+              decoration: InputDecoration(
+                hintText: 'Search for series, movies...',
+                border: InputBorder.none,
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: AppTheme.gradient1,
+                ),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: AppTheme.gradient1,
+                        ),
+                        onPressed: () => setState(() {
+                          _searchController.clear();
+                          _isSearching = false;
+                        }),
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 15,
+                  horizontal: 20,
+                ),
+              ),
             ),
-          );
-        },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(AsyncValue searchSuggestions) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      children: [
+        if (_searchHistory.isNotEmpty) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Recent Searches',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () => setState(() {
+                  Hive.box('history').clear();
+                  _searchHistory = [];
+                }),
+                child: Text(
+                  'Clear All',
+                  style: TextStyle(color: AppTheme.gradient1),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: _searchHistory.map((h) => _buildHistoryChip(h)).toList(),
+          ),
+          const SizedBox(height: 30),
+        ],
+        const Text(
+          'Trending Now',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 20),
+        searchSuggestions.when(
+          data: (suggestions) => GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: suggestions.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 0.575,
+              mainAxisSpacing: 15,
+              crossAxisSpacing: 15,
+            ),
+            itemBuilder: (context, index) =>
+                AnimeCard(anime: suggestions[index]),
+          ),
+          loading: () => _buildShimmerGrid(),
+          error: (err, stack) =>
+              const Center(child: Text('Failed to load suggestions')),
+        ),
+        const SizedBox(height: 100),
+      ],
+    );
+  }
+
+  Widget _buildHistoryChip(String label) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => SearchResultPage(query: label)),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppTheme.gradient1.withAlpha(20),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: AppTheme.gradient1.withAlpha(40)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.history_rounded, size: 16, color: AppTheme.gradient1),
+            const SizedBox(width: 8),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchResultsOverlay() {
+    final searchResults = ref.watch(searchViewModelProvider);
+    return searchResults.when(
+      data: (data) => Container(
+        margin: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: AppTheme.blackGradient, blurRadius: 30, spreadRadius: 10),
+          ],
+        ),
+        child: ListView.separated(
+          shrinkWrap: true,
+          itemCount: data.animes.take(6).length,
+          separatorBuilder: (context, index) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final anime = data.animes[index];
+            return ListTile(
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: CachedNetworkImage(
+                  imageUrl: anime.image,
+                  width: 45,
+                  height: 65,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              title: Text(
+                anime.title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              subtitle: Text(
+                anime.type ?? 'TV',
+                style: const TextStyle(fontSize: 12),
+              ),
+              onTap: () {
+                if (anime.slug.isNotEmpty) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AnimeDetailsPage(animeSlug: anime.slug),
+                    ),
+                  );
+                }
+              },
+            );
+          },
+        ),
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, s) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildShimmerGrid() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: 6,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        childAspectRatio: 0.6,
+        mainAxisSpacing: 15,
+        crossAxisSpacing: 15,
+      ),
+      itemBuilder: (context, index) => Shimmer.fromColors(
+        baseColor: AppTheme.gradient1.withAlpha(20),
+        highlightColor: AppTheme.gradient1.withAlpha(40),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+          ),
+        ),
       ),
     );
   }

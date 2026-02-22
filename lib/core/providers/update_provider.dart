@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:shinobihaven/core/services/background_update_service.dart';
 
 class UpdateSettings {

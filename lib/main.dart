@@ -12,6 +12,7 @@ import 'package:shinobihaven/core/constants/app_details.dart';
 import 'package:shinobihaven/core/pages/onboarding_page.dart';
 import 'package:shinobihaven/core/pages/splash_screen.dart';
 import 'package:shinobihaven/core/services/background_update_service.dart';
+import 'package:shinobihaven/core/services/download_background_service.dart';
 import 'package:shinobihaven/core/theme/accent_color_adapter.dart';
 import 'package:shinobihaven/core/theme/app_theme.dart';
 import 'package:shinobihaven/core/theme/theme_provider.dart';
@@ -21,8 +22,7 @@ import 'package:shinobihaven/features/anime/common/model/anime.dart';
 import 'package:shinobihaven/features/anime/common/view/pages/landing_page.dart';
 import 'package:shinobihaven/features/anime/details/view/pages/anime_details_page.dart';
 import 'package:window_size/window_size.dart';
-
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+import 'package:shinobihaven/core/navigation/navigator_key.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +58,9 @@ void main() async {
 
   await NotificationService.initialize();
   await BackgroundUpdateService.initialize();
+  if (Platform.isAndroid || Platform.isIOS) {
+    await DownloadBackgroundService.initialize();
+  }
 
   runApp(ProviderScope(child: const ShinobiHaven()));
 }
@@ -121,8 +124,7 @@ class _ShinobiHavenState extends ConsumerState<ShinobiHaven> {
 
   void _setupPermissions() async {
     if (Platform.isAndroid || Platform.isIOS) {
-      await Permission.storage.request();
-      await Permission.manageExternalStorage.request();
+      await [Permission.storage, Permission.manageExternalStorage].request();
       if (!Directory(AppDetails.appBackupDirectory).existsSync()) {
         Directory(AppDetails.appBackupDirectory).createSync(recursive: true);
       }
@@ -200,6 +202,12 @@ class _ShinobiHavenState extends ConsumerState<ShinobiHaven> {
           : UserBoxFunctions.isSetupDone()
           ? LandingPage()
           : OnBoardingPage(),
+      builder: (context, child) {
+        return Container(
+          decoration: AppTheme.mainBackground(context),
+          child: child,
+        );
+      },
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
