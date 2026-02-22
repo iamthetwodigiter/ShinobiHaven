@@ -155,15 +155,35 @@ class AppDetails {
 
   static const List<Map<String, dynamic>> changelogs = [
     {
+      "v1.2.0": {
+        "title": "Native Services & UI Revamp",
+        "date": "2026-02-22",
+        "latest": true,
+        "notes": [
+          "Full UI revamp with glassmorphism and gradient design language",
+          "Added native Android notification support for more reliable notifications",
+          "Added playback controls (play/pause, previous, next) directly in the notification",
+          "Notification onTap now navigates directly to the active episode stream",
+          "Implemented native background download service for robust offline episode downloads",
+          "Added DownloadTask and DownloadsState models for structured download management",
+          "Refactored downloads repository for improved reliability and performance",
+          "Extracted player lifecycle logic into a dedicated PlayerService",
+          "Updated profile, anime details, episodes, stream, home, and search pages with new design",
+          "Fixed theming and UI inconsistencies throughout the app",
+          "Fixed minor bugs and improved overall app performance",
+        ],
+      },
+    },
+    {
       "v1.1.2": {
         "title": "Custom Player & Major Fixes",
         "date": "2026-02-22",
-        "latest": true,
         "notes": [
           "Implemented a custom video player to support seek operations and skip intro/outro",
           "Added ability to resume video playback from the last watched position",
           "Fixed a major app exit issue",
           "Fixed video controller initialization issues",
+          "Version not released since a major release was in progress with more fixes",
         ],
       },
       "v1.1.1": {

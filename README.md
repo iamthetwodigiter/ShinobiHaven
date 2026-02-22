@@ -6,7 +6,7 @@ A feature-rich Flutter application for anime discovery and streaming, built with
 ![Dart](https://img.shields.io/badge/Dart-3.8.1-blue)
 ![Platforms](https://img.shields.io/badge/Platforms-Android%20%7C%20iOS%20%7C%20Web-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Version](https://img.shields.io/badge/Version-v1.0.1-brightgreen)
+![Version](https://img.shields.io/badge/Version-v1.2.0-brightgreen)
 ![Downloads](https://img.shields.io/github/downloads/iamthetwodigiter/shinobihaven/total?label=Downloads&logo=GitHub)
 
 ## 📱 Overview
@@ -23,20 +23,35 @@ ShinobiHaven is a comprehensive anime streaming application that provides users 
 - **Professional UI**: Native splash screen implementation with proper scaling and theming
 - **Bug-Free Streaming**: Enhanced video player with fixed persistence issues and state management
 
-## 🚀 Latest Updates (v1.0.1)
+## 🚀 Latest Updates (v1.2.0)
 
-### 🐛 Critical Bug Fixes
-- **Fixed Video Player Persistence**: Resolved critical issue where videos from different anime would persist when switching between anime from the same section
-- **Enhanced State Management**: Improved provider state management to prevent cross-contamination of video sources
-- **Better Video Initialization**: Enhanced video player initialization with proper state validation and cleanup
-- **Memory Optimization**: Improved widget lifecycle management for better memory usage and stability
-- **Provider Cleanup**: Fixed provider disposal issues that caused "Bad state" errors during navigation
+### 🎨 UI Revamp
+- **Glassmorphism Design**: Overhauled UI with modern glassmorphism and gradient design language across all major pages
+- **Profile Page Redesign**: Completely rebuilt profile page with improved layout and visual hierarchy
+- **Anime Details Overhaul**: Streamlined anime details page with a cleaner, more intuitive layout
+- **Episode & Stream Pages**: Refreshed episodes and stream pages with consistent new design system
+- **Home & Search Pages**: Updated home, search, and library pages for visual consistency
+- **Spotlight Cards**: Redesigned spotlight/hero cards with gradient overlay polish
+- **Anime Cards**: Updated anime card components with improved styling
+- **Theme Consistency**: Fixed theming and UI inconsistencies throughout the app
 
-### 🔧 Technical Improvements
-- **Section-Aware Caching**: Enhanced cache management to distinguish between different app sections (trending, recent, etc.)
-- **Timestamped Cache Keys**: Implemented unique cache keys to prevent data contamination between different anime
-- **Extended Cleanup Delays**: Added proper disposal timing to ensure complete state isolation
-- **Widget Recreation**: Force widget recreation for better state isolation between different anime
+### 🔔 Native Notification & Playback Controls
+- **Native Android Notifications**: Replaced Flutter-based notifications with a fully native Android notification system for better reliability
+- **Playback Controls in Notification**: Play/pause, previous, and next episode controls directly from the notification shade
+- **Notification onTap Navigation**: Tapping the playback notification navigates directly to the correct episode stream page
+- **Global Navigator Key**: Added a global navigator key to enable context-free navigation from native callbacks
+
+### ⬇️ Background Download Service
+- **Native Background Downloads**: Implemented a native Android `DownloadService` (Kotlin) for robust background episode downloads
+- **Download State Models**: Added `DownloadTask` and `DownloadsState` models for structured download management
+- **Downloads Repository Refactor**: Significantly refactored the downloads repository for reliability and performance
+- **Progress Notifications**: Real-time download progress updates pushed through native notifications
+
+### 🐛 Bug Fixes & Improvements
+- **App Exit/Crash Fix**: Resolved major application exit issue (carried forward from v1.1.2)
+- **Player Service**: Extracted player lifecycle logic into a dedicated `PlayerService` for cleaner separation
+- **Performance**: General performance improvements and removal of redundant rebuilds
+- **Minor Bug Fixes**: Various small fixes improving overall stability
 
 ## 🏗️ Architecture
 
@@ -274,7 +289,7 @@ class UserBoxFunctions {
 | **Architecture** | Feature based MVVM |
 | **Local Storage** | Hive with Backup/Restore |
 | **Networking** | HTTP package, Dio for downloads |
-| **Media** | Cached Network Image, Better Player Plus |
+| **Media** | Cached Network Image, Custom Video Player (media_kit) |
 | **UI Enhancement** | Shimmer, Carousel Slider |
 | **Notifications** | Flutter Local Notifications, Toastification |
 | **File Management** | Path Provider, File Picker, Open File |
@@ -359,11 +374,14 @@ await Hive.openBox('user');
 - **Phase 9**: Data backup and restore functionality ✅
 - **Phase 10**: Professional splash screen implementation ✅
 - **Phase 11**: Critical bug fixes and video player optimization ✅
-- **Phase 12**: Performance optimizations and caching 🔄
-- **Phase 13**: Advanced video player features 🔄
-- **Phase 14**: Social features and sharing 🔄
-- **Phase 15**: Cloud synchronization options 🔄
-- **Phase 16**: Manga reading support 🔄
+- **Phase 12**: Custom video player with seek & skip intro/outro ✅
+- **Phase 13**: Native notification system & playback controls ✅
+- **Phase 14**: Background download service (native Android) ✅
+- **Phase 15**: UI revamp with glassmorphism & gradient design ✅
+- **Phase 16**: Performance optimizations and caching 🔄
+- **Phase 17**: Social features and sharing 🔄
+- **Phase 18**: Cloud synchronization options 🔄
+- **Phase 19**: Manga reading support 🔄
 
 ## 🔒 Enhanced Privacy & Data Management
 
@@ -514,11 +532,12 @@ For support, feature requests, or bug reports:
 **Developed with ❤️ using Flutter | Professional, Privacy-Focused, Feature-Rich**
 
 ### Recent Updates Summary
+- ✅ **v1.2.0**: Full UI revamp — glassmorphism, gradients, and consistent theming
+- ✅ **v1.2.0**: Native Android notifications with playback controls and onTap navigation
+- ✅ **v1.2.0**: Native background download service with real-time progress notifications
+- ✅ **v1.1.2**: Custom video player with seek, skip intro/outro, and playback resumption
+- ✅ **v1.1.1**: Linux platform support and desktop UI adaptations
+- ✅ **v1.1.0**: Episode download support with progress tracking
+- ✅ **v1.0.2**: Dynamic accent color system and background update checker
 - ✅ **v1.0.1**: Critical video player fixes and enhanced state management
-- ✅ **v1.0.0**: Complete Update Management System with GitHub integration
-- ✅ **v1.0.0**: Professional Native Splash Screen with proper scaling
-- ✅ **v1.0.0**: Comprehensive Data Backup/Restore functionality
-- ✅ **v1.0.0**: Advanced Notification Management with smart lifecycle control
-- ✅ **v1.0.0**: Enhanced User Experience with streamlined navigation
-- ✅ **v1.0.0**: Performance Optimizations and better resource management
-- ✅ **v1.0.0**: Privacy Enhancements with detailed data handling transparency
+- ✅ **v1.0.0**: Complete Update Management, Backup/Restore, and Splash Screen
