@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:shinobihaven/core/utils/user_box_functions.dart';
 
 class ThemeNotifier extends StateNotifier<ThemeMode> {
