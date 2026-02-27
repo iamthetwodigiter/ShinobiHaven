@@ -184,65 +184,167 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
 
     return SliverPadding(
       padding: const EdgeInsets.all(12),
-      sliver: SliverList.separated(
-        itemCount: groups.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 8),
-        itemBuilder: (context, index) {
-          final animeTitle = groups[index].key;
-          final episodes = groups[index].value;
-          final posterPath = episodes.first['posterPath'] as String?;
-          return ListTile(
-            tileColor: AppTheme.blackGradient,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            leading: posterPath != null && File(posterPath).existsSync()
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.file(
-                      File(posterPath),
-                      width: 56,
-                      height: 56,
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                : Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: AppTheme.gradient1.withAlpha(30),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center(
-                      child: Icon(Icons.movie, color: AppTheme.gradient1),
-                    ),
-                  ),
-            title: Text(
-              animeTitle,
-              style: const TextStyle(
-                color: AppTheme.whiteGradient,
-                fontWeight: FontWeight.bold,
+      sliver: MediaQuery.sizeOf(context).width > 900
+          ? SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 3,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 12,
               ),
-            ),
-            subtitle: Text(
-              '${episodes.length} episode${episodes.length == 1 ? '' : 's'} downloaded',
-              style: TextStyle(color: AppTheme.whiteGradient.withAlpha(180)),
-            ),
-            trailing: Icon(Icons.chevron_right, color: AppTheme.gradient1),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => DownloadedEpisodesPage(
-                    animeTitle: animeTitle,
-                    episodes: episodes,
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final animeTitle = groups[index].key;
+                  final episodes = groups[index].value;
+                  final posterPath = episodes.first['posterPath'] as String?;
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DownloadedEpisodesPage(
+                              animeTitle: animeTitle,
+                              episodes: episodes,
+                            ),
+                          ),
+                        ).then((_) => _refresh());
+                      },
+                      borderRadius: BorderRadius.circular(15),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.blackGradient.withAlpha(150),
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(
+                            color: Colors.white.withAlpha(20),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            posterPath != null && File(posterPath).existsSync()
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Image.file(
+                                      File(posterPath),
+                                      width: 64,
+                                      height: 64,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                : Container(
+                                    width: 64,
+                                    height: 64,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.gradient1.withAlpha(30),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Center(
+                                      child: Icon(Icons.movie,
+                                          color: AppTheme.gradient1),
+                                    ),
+                                  ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    animeTitle,
+                                    style: const TextStyle(
+                                      color: AppTheme.whiteGradient,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${episodes.length} episodes',
+                                    style: TextStyle(
+                                      color: AppTheme.whiteGradient
+                                          .withAlpha(180),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.chevron_right,
+                                color: AppTheme.gradient1, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                childCount: groups.length,
+              ),
+            )
+          : SliverList.separated(
+              itemCount: groups.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final animeTitle = groups[index].key;
+                final episodes = groups[index].value;
+                final posterPath = episodes.first['posterPath'] as String?;
+                return ListTile(
+                  tileColor: AppTheme.blackGradient,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ),
-              ).then((_) => _refresh());
-            },
-          );
-        },
-      ),
+                  leading: posterPath != null && File(posterPath).existsSync()
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(
+                            File(posterPath),
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: AppTheme.gradient1.withAlpha(30),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Icon(Icons.movie, color: AppTheme.gradient1),
+                          ),
+                        ),
+                  title: Text(
+                    animeTitle,
+                    style: const TextStyle(
+                      color: AppTheme.whiteGradient,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${episodes.length} episode${episodes.length == 1 ? '' : 's'} downloaded',
+                    style:
+                        TextStyle(color: AppTheme.whiteGradient.withAlpha(180)),
+                  ),
+                  trailing: Icon(Icons.chevron_right, color: AppTheme.gradient1),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DownloadedEpisodesPage(
+                          animeTitle: animeTitle,
+                          episodes: episodes,
+                        ),
+                      ),
+                    ).then((_) => _refresh());
+                  },
+                );
+              },
+            ),
     );
   }
 }

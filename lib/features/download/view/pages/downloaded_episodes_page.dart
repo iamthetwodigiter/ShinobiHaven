@@ -35,26 +35,54 @@ class DownloadedEpisodesPage extends StatelessWidget {
         backgroundColor: AppTheme.primaryBlack,
         title: Text(animeTitle, style: TextStyle(color: AppTheme.gradient1)),
       ),
-      body: ListView.separated(
-        padding: EdgeInsets.all(12),
-        itemCount: sorted.length,
-        separatorBuilder: (_, _) => SizedBox(height: 8),
-        itemBuilder: (context, i) {
-          final e = sorted[i];
-          final filePath = e['filePath'] as String;
-          final fileName = p.basename(filePath);
-          final size =
-              (e['size'] as int?) ??
-              (File(filePath).existsSync() ? File(filePath).lengthSync() : 0);
-          return DownloadedEpisodeTile(
-            filePath: filePath,
-            fileName: fileName,
-            title: (e['title'] as String?),
-            episodeNumber: (e['episodeNumber'] as String?),
-            size: _formatSize(size),
-          );
-        },
-      ),
+      body: MediaQuery.sizeOf(context).width > 900
+          ? GridView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: sorted.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 3.2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 12,
+              ),
+              itemBuilder: (context, i) {
+                final e = sorted[i];
+                final filePath = e['filePath'] as String;
+                final fileName = p.basename(filePath);
+                final size = (e['size'] as int?) ??
+                    (File(filePath).existsSync()
+                        ? File(filePath).lengthSync()
+                        : 0);
+                return DownloadedEpisodeTile(
+                  filePath: filePath,
+                  fileName: fileName,
+                  title: (e['title'] as String?),
+                  episodeNumber: (e['episodeNumber'] as String?),
+                  size: _formatSize(size),
+                );
+              },
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(12),
+              itemCount: sorted.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (context, i) {
+                final e = sorted[i];
+                final filePath = e['filePath'] as String;
+                final fileName = p.basename(filePath);
+                final size = (e['size'] as int?) ??
+                    (File(filePath).existsSync()
+                        ? File(filePath).lengthSync()
+                        : 0);
+                return DownloadedEpisodeTile(
+                  filePath: filePath,
+                  fileName: fileName,
+                  title: (e['title'] as String?),
+                  episodeNumber: (e['episodeNumber'] as String?),
+                  size: _formatSize(size),
+                );
+              },
+            ),
     );
   }
 }

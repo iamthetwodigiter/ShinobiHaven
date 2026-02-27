@@ -142,7 +142,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            padding: EdgeInsets.symmetric(
+              horizontal: MediaQuery.sizeOf(context).width > 900 ? MediaQuery.sizeOf(context).width * 0.2 : 24, 
+              vertical: 24,
+            ),
             sliver: SliverList.list(
               children: [
                 Center(
@@ -504,105 +507,85 @@ class _EditProfileState extends ConsumerState<EditProfile> {
                         child: SingleChildScrollView(
                           child: Container(
                             width: size.width,
-                            padding: EdgeInsets.symmetric(horizontal: 30),
-                            child: Column(
-                              spacing: 8,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: <Widget>[
-                                Material(
-                                  elevation: 4,
-                                  borderRadius: BorderRadius.circular(15),
-                                  child: TextField(
-                                    controller: _nameController,
-                                    focusNode: _focusNode,
-                                    cursorColor: AppTheme.gradient1,
-                                    style: TextStyle(fontSize: 16),
-                                    onSubmitted: (name) {},
-                                    decoration: InputDecoration(
-                                      hintText: _userName,
-                                      hintStyle: TextStyle(fontSize: 16),
-                                      labelText: 'Enter a Username',
-                                      labelStyle: TextStyle(color: AppTheme.gradient1),
-                                      floatingLabelBehavior:
-                                          FloatingLabelBehavior.always,
-                                      border: _border,
-                                      enabledBorder: _border,
-                                      focusedBorder: _focusedBorder,
-                                      contentPadding: EdgeInsets.symmetric(
-                                        vertical: 16,
-                                        horizontal: 18,
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(horizontal: 30),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 800),
+                              child: Column(
+                                spacing: 16,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Material(
+                                    elevation: 4,
+                                    borderRadius: BorderRadius.circular(15),
+                                    child: TextField(
+                                      controller: _nameController,
+                                      focusNode: _focusNode,
+                                      cursorColor: AppTheme.gradient1,
+                                      style: const TextStyle(fontSize: 16),
+                                      onSubmitted: (name) {},
+                                      decoration: InputDecoration(
+                                        hintText: _userName,
+                                        hintStyle: const TextStyle(fontSize: 16),
+                                        labelText: 'Enter a Username',
+                                        labelStyle: TextStyle(color: AppTheme.gradient1),
+                                        floatingLabelBehavior:
+                                            FloatingLabelBehavior.always,
+                                        border: _border,
+                                        enabledBorder: _border,
+                                        focusedBorder: _focusedBorder,
+                                        contentPadding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                          horizontal: 18,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                Text(
-                                  'Choose a profile',
-                                  style: TextStyle(fontSize: 18),
-                                ),
-                                Container(
-                                  margin: (Platform.isAndroid || Platform.isIOS)
-                                      ? null
-                                      : EdgeInsets.symmetric(horizontal: 150),
-                                  child: SingleChildScrollView(
-                                    child: Wrap(
-                                      alignment: WrapAlignment.spaceEvenly,
-                                      spacing: 15,
-                                      runSpacing: 15,
-                                      children: List.generate(
-                                        _assetsPath.length,
-                                        (index) {
-                                          final asset = _assetsPath.elementAt(
-                                            index,
-                                          );
-                                          return GestureDetector(
-                                            onTap: () {
-                                              setState(() {
-                                                _focusNode.unfocus();
-                                                _changeUserProfile(index);
-                                              });
-                                            },
-                                            child: Container(
-                                              height:
-                                                  (Platform.isAndroid ||
-                                                      Platform.isIOS)
-                                                  ? size.width / 4
-                                                  : 125,
-                                              width:
-                                                  (Platform.isAndroid ||
-                                                      Platform.isIOS)
-                                                  ? size.width / 4
-                                                  : 125,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                border:
-                                                    _currentProfileChoice ==
-                                                        index
-                                                    ? Border.all(
-                                                        color:
-                                                            AppTheme.gradient1,
-                                                        width: 5,
-                                                      )
-                                                    : null,
-                                              ),
-                                              child: ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(125),
-                                                child: Image.asset(
-                                                  asset,
-                                                  height: 95,
-                                                  width: 95,
-                                                ),
+                                  const Text(
+                                    'Choose a profile',
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  ),
+                                  Wrap(
+                                    alignment: WrapAlignment.start,
+                                    spacing: 20,
+                                    runSpacing: 20,
+                                    children: List.generate(
+                                      _assetsPath.length,
+                                      (index) {
+                                        final asset = _assetsPath.elementAt(index);
+                                        return GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              _focusNode.unfocus();
+                                              _changeUserProfile(index);
+                                            });
+                                          },
+                                          child: Container(
+                                            height: size.width > 900 ? 100 : 80,
+                                            width: size.width > 900 ? 100 : 80,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: _currentProfileChoice == index
+                                                  ? Border.all(
+                                                      color: AppTheme.gradient1,
+                                                      width: 4,
+                                                    )
+                                                  : null,
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(100),
+                                              child: Image.asset(
+                                                asset,
+                                                fit: BoxFit.cover,
                                               ),
                                             ),
-                                          );
-                                        },
-                                      ),
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
-                                ),
-                                SizedBox(),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -644,7 +627,6 @@ class _SetDarkModeState extends ConsumerState<SetDarkMode> {
   @override
   Widget build(BuildContext context) {
     final int selectedMode = UserBoxFunctions.darkModeState();
-    final availableWidth = (MediaQuery.sizeOf(context).width - 48);
     final accentColor = ref.watch(themeModeProvider.notifier).getAccentColor();
     return Scaffold(
       body: SafeArea(
@@ -690,102 +672,116 @@ class _SetDarkModeState extends ConsumerState<SetDarkMode> {
             ),
             Expanded(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Choose your app theme:',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1000),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ThemeChoice(
-                          currentThemeChoice: selectedMode,
-                          title: 'Light Mode',
-                          titleTextColor: AppTheme.blackGradient,
-                          themeColor: AppTheme.whiteGradient,
-                          themeMode: 0,
-                          onTap: () {
-                            _setThemeMode(0);
-                          },
+                        const Text(
+                          'Choose your app theme:',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        ThemeChoice(
-                          currentThemeChoice: selectedMode,
-                          title: 'Dark Mode',
-                          titleTextColor: AppTheme.whiteGradient,
-                          themeColor: AppTheme.blackGradient,
-                          themeMode: 1,
-                          onTap: () {
-                            _setThemeMode(1);
-                          },
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            ThemeChoice(
+                              currentThemeChoice: selectedMode,
+                              title: 'Light Mode',
+                              titleTextColor: AppTheme.blackGradient,
+                              themeColor: AppTheme.whiteGradient,
+                              themeMode: 0,
+                              onTap: () {
+                                _setThemeMode(0);
+                              },
+                            ),
+                            ThemeChoice(
+                              currentThemeChoice: selectedMode,
+                              title: 'Dark Mode',
+                              titleTextColor: AppTheme.whiteGradient,
+                              themeColor: AppTheme.blackGradient,
+                              themeMode: 1,
+                              onTap: () {
+                                _setThemeMode(1);
+                              },
+                            ),
+                            ThemeChoice(
+                              currentThemeChoice: selectedMode,
+                              title: 'System Choice',
+                              themeColor:
+                                  Theme.brightnessOf(context) == Brightness.light
+                                  ? AppTheme.whiteGradient
+                                  : AppTheme.blackGradient,
+                              titleTextColor:
+                                  Theme.brightnessOf(context) == Brightness.dark
+                                  ? AppTheme.whiteGradient
+                                  : AppTheme.blackGradient,
+                              themeMode: 2,
+                              onTap: () {
+                                _setThemeMode(2);
+                              },
+                            ),
+                          ],
                         ),
-                        ThemeChoice(
-                          currentThemeChoice: selectedMode,
-                          title: 'System Choice',
-                          themeColor:
-                              Theme.brightnessOf(context) == Brightness.light
-                              ? AppTheme.whiteGradient
-                              : AppTheme.blackGradient,
-                          titleTextColor:
-                              Theme.brightnessOf(context) == Brightness.dark
-                              ? AppTheme.whiteGradient
-                              : AppTheme.blackGradient,
-                          themeMode: 2,
-                          onTap: () {
-                            _setThemeMode(2);
-                          },
+                        const SizedBox(height: 32),
+                        const Text(
+                          'Choose an accent color:',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: GridView.builder(
+                            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 80,
+                              mainAxisSpacing: 15,
+                              crossAxisSpacing: 15,
+                            ),
+                            itemCount: AccentColors.accentColors.length,
+                            itemBuilder: (context, index) {
+                              final color = AccentColors.accentColors[index];
+                              return Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _setAccentColor(color);
+                                      });
+                                    },
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      height: 60,
+                                      width: 60,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: color,
+                                        border: Border.all(
+                                          color: color.toARGB32() == accentColor.toARGB32() 
+                                            ? Colors.white 
+                                            : Colors.transparent,
+                                          width: 2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  if (color.toARGB32() == accentColor.toARGB32())
+                                    const Icon(Icons.done, size: 30, color: Colors.white),
+                                ],
+                              );
+                            },
+                          ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 24),
-                    Text(
-                      'Choose an accent color:',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Expanded(
-                      child: GridView.count(
-                        padding: EdgeInsets.only(top: 8),
-                        crossAxisCount: (Platform.isAndroid || Platform.isIOS)
-                            ? (availableWidth ~/ 75).clamp(1, 6)
-                            : 15,
-                        mainAxisSpacing: 10,
-                        crossAxisSpacing: 10,
-                        children: AccentColors.accentColors.map((color) {
-                          return Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _setAccentColor(color);
-                                  });
-                                },
-                                child: Container(
-                                  height: 75,
-                                  width: 75,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: color,
-                                  ),
-                                ),
-                              ),
-                              if (color.toARGB32() == accentColor.toARGB32())
-                                Icon(Icons.done, size: 50),
-                            ],
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -1029,15 +1025,18 @@ class _WatchHistoryState extends State<WatchHistory> {
 
                   final int maxCount = items.first.totalCount;
 
-                  return ListView.separated(
-                    padding: EdgeInsets.symmetric(vertical: 12),
+                  return GridView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                     itemCount: items.length,
-                    separatorBuilder: (_, _) => SizedBox(height: 8),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: MediaQuery.sizeOf(context).width > 900 ? 3 : 1,
+                      childAspectRatio: MediaQuery.sizeOf(context).width > 900 ? 2.5 : 3.5,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                    ),
                     itemBuilder: (context, index) {
                       final it = items[index];
-                      final progress = maxCount > 0
-                          ? (it.totalCount / maxCount)
-                          : 0.0;
+                      final progress = maxCount > 0 ? (it.totalCount / maxCount) : 0.0;
 
                       return GestureDetector(
                         onTap: () {
@@ -1045,55 +1044,50 @@ class _WatchHistoryState extends State<WatchHistory> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) {
-                                  return AnimeDetailsPage(animeSlug: it.slug);
-                                },
+                                builder: (_) => AnimeDetailsPage(animeSlug: it.slug),
                               ),
                             );
                           }
                         },
                         child: Container(
-                          margin: EdgeInsets.symmetric(horizontal: 12),
-                          padding: EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(15),
                             color: AppTheme.cardColor(context).withAlpha(150),
                           ),
                           child: Row(
                             children: [
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(10),
                                 child: it.anime != null
                                     ? CachedNetworkImage(
                                         imageUrl: it.anime!.image,
-                                        width: 96,
-                                        height: 96,
+                                        width: 80,
+                                        height: 80,
                                         fit: BoxFit.cover,
-                                        placeholder: (c, u) => Container(
-                                          color: AppTheme.greyGradient,
-                                          width: 96,
-                                          height: 96,
-                                        ),
                                       )
                                     : Container(
-                                        width: 96,
-                                        height: 96,
+                                        width: 80,
+                                        height: 80,
                                         color: AppTheme.greyGradient,
                                       ),
                               ),
-                              SizedBox(width: 12),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
                                       it.anime?.title ?? it.slug,
-                                      style: TextStyle(
-                                        fontSize: 16,
+                                      style: const TextStyle(
+                                        fontSize: 15,
                                         fontWeight: FontWeight.bold,
                                       ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    SizedBox(height: 6),
+                                    const SizedBox(height: 6),
                                     Row(
                                       children: [
                                         Icon(
@@ -1101,37 +1095,24 @@ class _WatchHistoryState extends State<WatchHistory> {
                                           size: 14,
                                           color: AppTheme.gradient1,
                                         ),
-                                        SizedBox(width: 6),
+                                        const SizedBox(width: 4),
                                         Text(
-                                          '${it.totalCount} view${it.totalCount == 1 ? '' : 's'}',
+                                          '${it.totalCount} views',
                                           style: TextStyle(
                                             color: AppTheme.gradient1,
+                                            fontSize: 12,
                                           ),
                                         ),
-                                        SizedBox(width: 12),
                                       ],
                                     ),
-                                    SizedBox(height: 8),
+                                    const SizedBox(height: 6),
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(6),
                                       child: LinearProgressIndicator(
                                         value: progress.clamp(0.0, 1.0),
-                                        minHeight: 6,
-                                        backgroundColor: AppTheme.whiteGradient
-                                            .withAlpha(100),
-                                        valueColor: AlwaysStoppedAnimation(
-                                          AppTheme.gradient1,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(height: 6),
-                                    Text(
-                                      '${it.distinctEpisodes} episode${it.distinctEpisodes == 1 ? '' : 's'} watched',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppTheme.whiteGradient.withAlpha(
-                                          150,
-                                        ),
+                                        minHeight: 4,
+                                        backgroundColor: AppTheme.whiteGradient.withAlpha(50),
+                                        valueColor: AlwaysStoppedAnimation(AppTheme.gradient1),
                                       ),
                                     ),
                                   ],
@@ -1311,62 +1292,60 @@ class _UserTopAnimesState extends State<UserTopAnimes> {
 
                   final int maxCount = items.first.totalCount;
 
-                  return ListView.separated(
-                    padding: EdgeInsets.symmetric(vertical: 12),
+                  return GridView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                     itemCount: items.length,
-                    separatorBuilder: (_, _) => SizedBox(height: 8),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: MediaQuery.sizeOf(context).width > 900 ? 3 : 1,
+                      childAspectRatio: MediaQuery.sizeOf(context).width > 900 ? 2.5 : 3.5,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                    ),
                     itemBuilder: (context, index) {
                       final it = items[index];
-                      final progress = maxCount > 0
-                          ? (it.totalCount / maxCount)
-                          : 0.0;
+                      final progress = maxCount > 0 ? (it.totalCount / maxCount) : 0.0;
                       return GestureDetector(
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) {
-                                return AnimeDetailsPage(animeSlug: it.slug);
-                              },
+                              builder: (_) => AnimeDetailsPage(animeSlug: it.slug),
                             ),
                           );
                         },
                         child: Container(
-                          margin: EdgeInsets.symmetric(horizontal: 12),
-                          padding: EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(15),
                             color: AppTheme.cardColor(context).withAlpha(150),
                           ),
                           child: Row(
                             children: [
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(10),
                                 child: CachedNetworkImage(
                                   imageUrl: it.anime.image,
-                                  width: 96,
-                                  height: 96,
+                                  width: 80,
+                                  height: 80,
                                   fit: BoxFit.cover,
-                                  placeholder: (c, u) => Container(
-                                    color: AppTheme.greyGradient,
-                                    width: 96,
-                                    height: 96,
-                                  ),
                                 ),
                               ),
-                              SizedBox(width: 12),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
                                       it.anime.title,
-                                      style: TextStyle(
-                                        fontSize: 16,
+                                      style: const TextStyle(
+                                        fontSize: 15,
                                         fontWeight: FontWeight.bold,
                                       ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    SizedBox(height: 6),
+                                    const SizedBox(height: 6),
                                     Row(
                                       children: [
                                         Icon(
@@ -1374,51 +1353,30 @@ class _UserTopAnimesState extends State<UserTopAnimes> {
                                           size: 14,
                                           color: AppTheme.gradient1,
                                         ),
-                                        SizedBox(width: 6),
+                                        const SizedBox(width: 4),
                                         Text(
-                                          '${it.totalCount} view${it.totalCount == 1 ? '' : 's'}',
+                                          '${it.totalCount} views',
                                           style: TextStyle(
                                             color: AppTheme.gradient1,
+                                            fontSize: 12,
                                           ),
                                         ),
-                                        SizedBox(width: 12),
-                                        if (it.topEpisodeId != null) ...[
-                                          Icon(
-                                            Icons.play_arrow,
-                                            size: 14,
-                                            color: AppTheme.gradient1,
-                                          ),
-                                          SizedBox(width: 6),
-                                        ],
                                       ],
                                     ),
-                                    SizedBox(height: 8),
+                                    const SizedBox(height: 6),
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(6),
                                       child: LinearProgressIndicator(
                                         value: progress.clamp(0.0, 1.0),
-                                        minHeight: 6,
-                                        backgroundColor: AppTheme.whiteGradient
-                                            .withAlpha(100),
-                                        valueColor: AlwaysStoppedAnimation(
-                                          AppTheme.gradient1,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(height: 6),
-                                    Text(
-                                      '${it.episodeCount} distinct episode${it.episodeCount == 1 ? '' : 's'} watched',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppTheme.whiteGradient.withAlpha(
-                                          150,
-                                        ),
+                                        minHeight: 4,
+                                        backgroundColor: AppTheme.whiteGradient.withAlpha(50),
+                                        valueColor: AlwaysStoppedAnimation(AppTheme.gradient1),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               Text(
                                 '#${index + 1}',
                                 style: TextStyle(
@@ -1496,9 +1454,14 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
               ),
             ),
             Expanded(
-              child: Markdown(
-                data: PrivacyPolicy.privacyPolicy,
-                styleSheet: MarkdownStyleSheet(h2: TextStyle(fontSize: 16)),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
+                  child: Markdown(
+                    data: PrivacyPolicy.privacyPolicy,
+                    styleSheet: MarkdownStyleSheet(h2: TextStyle(fontSize: 16)),
+                  ),
+                ),
               ),
             ),
           ],
@@ -1589,17 +1552,20 @@ class ChangelogPage extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 15,
-                  vertical: 10,
-                ),
-                child: ListView.separated(
-                  itemCount: entries.length,
-                  separatorBuilder: (_, _) => SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final key = entries[index].key;
-                    final data = entries[index].value;
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 15,
+                      vertical: 10,
+                    ),
+                    child: ListView.separated(
+                      itemCount: entries.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final key = entries[index].key;
+                        final data = entries[index].value;
                     final title = (data is Map && data['title'] != null)
                         ? data['title'].toString()
                         : key;
@@ -1757,6 +1723,8 @@ class ChangelogPage extends StatelessWidget {
                       ),
                     );
                   },
+                ),
+                  ),
                 ),
               ),
             ),
@@ -2066,80 +2034,85 @@ class _ManageAppDataState extends State<ManageAppData> {
               ),
             ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 25),
-                child: Column(
-                  spacing: 8,
-                  children: [
-                    SizedBox(height: 10),
-                    ListTile(
-                      tileColor: AppTheme.cardColor(context).withAlpha(100),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      leading: _isBackingUp
-                          ? SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppTheme.gradient1,
-                              ),
-                            )
-                          : Icon(
-                              Icons.backup,
-                              size: 18,
-                              color: AppTheme.gradient1,
-                            ),
-                      title: Text('Backup App Data'),
-                      subtitle: Text('Save all your data to a file'),
-                      trailing: _isBackingUp
-                          ? null
-                          : Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: _isBackingUp ? null : _backupData,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 25),
+                    child: Column(
+                      spacing: 8,
+                      children: [
+                        const SizedBox(height: 10),
+                        ListTile(
+                          tileColor: AppTheme.cardColor(context).withAlpha(100),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          leading: _isBackingUp
+                              ? SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppTheme.gradient1,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.backup,
+                                  size: 18,
+                                  color: AppTheme.gradient1,
+                                ),
+                          title: const Text('Backup App Data'),
+                          subtitle: const Text('Save all your data to a file'),
+                          trailing: _isBackingUp
+                              ? null
+                              : const Icon(Icons.arrow_forward_ios, size: 16),
+                          onTap: _isBackingUp ? null : _backupData,
+                        ),
+                        ListTile(
+                          tileColor: AppTheme.cardColor(context).withAlpha(100),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          leading: _isRestoring
+                              ? SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppTheme.gradient1,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.restore,
+                                  size: 18,
+                                  color: AppTheme.gradient1,
+                                ),
+                          title: const Text('Restore from Backup'),
+                          subtitle: const Text('Load data from a backup file'),
+                          trailing: _isRestoring
+                              ? null
+                              : const Icon(Icons.arrow_forward_ios, size: 16),
+                          onTap: _isRestoring ? null : _restoreData,
+                        ),
+                        ListTile(
+                          tileColor: AppTheme.cardColor(context).withAlpha(100),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          leading: Icon(
+                            Icons.delete,
+                            size: 18,
+                            color: AppTheme.gradient1,
+                          ),
+                          title: const Text('Clear App Data'),
+                          subtitle: const Text('Delete all local data'),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                          onTap: _clearData,
+                        ),
+                      ],
                     ),
-                    ListTile(
-                      tileColor: AppTheme.cardColor(context).withAlpha(100),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadiusGeometry.circular(10),
-                      ),
-                      leading: _isRestoring
-                          ? SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppTheme.gradient1,
-                              ),
-                            )
-                          : Icon(
-                              Icons.restore,
-                              size: 18,
-                              color: AppTheme.gradient1,
-                            ),
-                      title: Text('Restore from Backup'),
-                      subtitle: Text('Load data from a backup file'),
-                      trailing: _isRestoring
-                          ? null
-                          : Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: _isRestoring ? null : _restoreData,
-                    ),
-                    ListTile(
-                      tileColor: AppTheme.cardColor(context).withAlpha(100),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadiusGeometry.circular(10),
-                      ),
-                      leading: Icon(
-                        Icons.delete,
-                        size: 18,
-                        color: AppTheme.gradient1,
-                      ),
-                      title: Text('Clear App Data'),
-                      subtitle: Text('Delete all local data'),
-                      trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: _clearData,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

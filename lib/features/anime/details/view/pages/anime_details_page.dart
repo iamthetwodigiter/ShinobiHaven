@@ -1051,10 +1051,126 @@ class _AnimeDetailsPageState extends ConsumerState<AnimeDetailsPage> {
   }
 
   Widget _buildDesktopLayout(AnimeDetails anime) {
-    return Center(
-      child: Text(
-        'Desktop Layout Revamp Pending',
-        style: TextStyle(color: Colors.white),
+    return Scaffold(
+      backgroundColor: AppTheme.primaryBlack,
+      body: Row(
+        children: [
+          // Left cinematic poster
+          Expanded(
+            flex: 4,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Hero(
+                  tag: 'anime-image-${anime.title}',
+                  child: CachedNetworkImage(
+                    imageUrl: anime.image,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Colors.transparent,
+                        AppTheme.primaryBlack.withAlpha(200),
+                        AppTheme.primaryBlack,
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 40,
+                  left: 40,
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withAlpha(150),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white.withAlpha(50)),
+                      ),
+                      child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Right detail pane
+          Expanded(
+            flex: 6,
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.all(60),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.gradient1,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              anime.type.toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 2,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          _buildStatItem(Icons.star_rounded, anime.score, Colors.amber),
+                          const SizedBox(width: 20),
+                          _buildStatItem(Icons.closed_caption_rounded, anime.subCount ?? '?', Colors.white70),
+                          const SizedBox(width: 20),
+                          _buildStatItem(Icons.mic_rounded, anime.dubCount ?? '?', Colors.white70),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        anime.title,
+                        style: const TextStyle(
+                          fontSize: 54,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          height: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        anime.japanese ?? '',
+                        style: TextStyle(
+                          fontSize: 24,
+                          color: AppTheme.gradient1.withAlpha(180),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      _buildActionButtons(),
+                      const SizedBox(height: 50),
+                      _buildTabsControl(),
+                      const SizedBox(height: 30),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: _buildSelectedTabContent(anime),
+                      ),
+                    ]),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

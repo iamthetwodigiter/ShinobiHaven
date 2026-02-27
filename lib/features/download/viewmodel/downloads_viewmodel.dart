@@ -21,7 +21,9 @@ class DownloadsViewModel extends StateNotifier<DownloadsState> {
   final DownloadsRepository _repository;
 
   DownloadsViewModel(this._repository) : super(DownloadsState.initial()) {
-    _initServiceListeners();
+    if (Platform.isAndroid || Platform.isIOS) {
+      _initServiceListeners();
+    }
     if (Platform.isAndroid) {
       _initNativeListeners();
     }
@@ -97,7 +99,10 @@ class DownloadsViewModel extends StateNotifier<DownloadsState> {
   }
 
   void _initServiceListeners() {
-    FlutterBackgroundService().on('progress_update').listen((event) {
+    final service = _getService();
+    if (service == null) return;
+
+    service.on('progress_update').listen((event) {
       if (event != null) {
         _updateTaskState(
           event['id'] as int,
@@ -112,7 +117,7 @@ class DownloadsViewModel extends StateNotifier<DownloadsState> {
       }
     });
 
-    FlutterBackgroundService().on('subtitle_saved').listen((event) {
+    service.on('subtitle_saved').listen((event) {
       if (event != null) {
         final id = event['id'];
         final language = event['language'];
@@ -134,7 +139,7 @@ class DownloadsViewModel extends StateNotifier<DownloadsState> {
       }
     });
 
-    FlutterBackgroundService().on('download_complete').listen((event) {
+    service.on('download_complete').listen((event) {
       if (event != null) {
         final id = event['id'] as int;
         _updateTaskState(id, progress: 1.0, status: DownloadStatus.completed);
@@ -143,7 +148,7 @@ class DownloadsViewModel extends StateNotifier<DownloadsState> {
       }
     });
 
-    FlutterBackgroundService().on('download_error').listen((event) {
+    service.on('download_error').listen((event) {
       if (event != null) {
         _updateTaskState(
           event['id'] as int,
@@ -234,9 +239,9 @@ class DownloadsViewModel extends StateNotifier<DownloadsState> {
         'savePath': savePath,
         'totalDuration': totalDuration,
       });
-    } else {
-      // Delegate to background service for iOS/Desktop
-      FlutterBackgroundService().invoke('start_download', {
+    } else if (Platform.isIOS) {
+      // Delegate to background service for iOS
+      _getService()?.invoke('start_download', {
         'task': task.toJson(),
       });
     }
@@ -270,6 +275,13 @@ class DownloadsViewModel extends StateNotifier<DownloadsState> {
     }).toList();
 
     state = state.copyWith(ongoingTasks: updatedTasks);
+  }
+
+  FlutterBackgroundService? _getService() {
+    if (Platform.isAndroid || Platform.isIOS) {
+      return FlutterBackgroundService();
+    }
+    return null;
   }
 
   @override

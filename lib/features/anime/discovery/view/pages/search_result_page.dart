@@ -246,27 +246,23 @@ class _SearchResultPageState extends ConsumerState<SearchResultPage> {
                                       ),
                                     ],
                                   )
-                                : SizedBox(
-                                    width: size.width,
-                                    child: Wrap(
-                                      alignment: WrapAlignment.center,
-                                      runSpacing: 12,
-                                      spacing: 12,
-                                      children: List.generate(
-                                        searchResults.animes.length,
-                                        (index) {
-                                          final result = searchResults.animes
-                                              .elementAt(index);
-                                          return SizedBox(
-                                            width: size.width / 2.25,
-                                            child: AnimeCard(
-                                              anime: result,
-                                              showAdditionalInfo: false,
-                                            ),
-                                          );
-                                        },
-                                      ),
+                                : GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: searchResults.animes.length,
+                                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: size.width > 900 ? 6 : 2,
+                                      childAspectRatio: 0.65,
+                                      mainAxisSpacing: 15,
+                                      crossAxisSpacing: 15,
                                     ),
+                                    itemBuilder: (context, index) {
+                                      final result = searchResults.animes.elementAt(index);
+                                      return AnimeCard(
+                                        anime: result,
+                                        showAdditionalInfo: false,
+                                      );
+                                    },
                                   ),
                           ],
                         ),
@@ -298,7 +294,7 @@ class _SearchResultPageState extends ConsumerState<SearchResultPage> {
                                         return AnimatedContainer(
                                           duration: Duration(milliseconds: 300),
                                           curve: Curves.easeInOut,
-                                          width: size.width / 2.25 - 8,
+                                          width: size.width > 900 ? (size.width - 100) / 4.2 : size.width / 2.25 - 8,
                                           child:
                                               DropdownButtonFormField<String>(
                                                 isExpanded: true,

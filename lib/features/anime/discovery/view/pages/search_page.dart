@@ -220,19 +220,22 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         ),
         const SizedBox(height: 20),
         searchSuggestions.when(
-          data: (suggestions) => GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: suggestions.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 0.575,
-              mainAxisSpacing: 15,
-              crossAxisSpacing: 15,
-            ),
-            itemBuilder: (context, index) =>
-                AnimeCard(anime: suggestions[index]),
-          ),
+          data: (suggestions) {
+            final isDesktop = MediaQuery.sizeOf(context).width > 900;
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: suggestions.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: isDesktop ? 6 : 3,
+                childAspectRatio: 0.65,
+                mainAxisSpacing: 15,
+                crossAxisSpacing: 15,
+              ),
+              itemBuilder: (context, index) =>
+                  AnimeCard(anime: suggestions[index]),
+            );
+          },
           loading: () => _buildShimmerGrid(),
           error: (err, stack) =>
               const Center(child: Text('Failed to load suggestions')),
@@ -325,13 +328,14 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   Widget _buildShimmerGrid() {
+    final isDesktop = MediaQuery.sizeOf(context).width > 900;
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: 6,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 0.6,
+      itemCount: isDesktop ? 12 : 6,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: isDesktop ? 6 : 3,
+        childAspectRatio: 0.65,
         mainAxisSpacing: 15,
         crossAxisSpacing: 15,
       ),

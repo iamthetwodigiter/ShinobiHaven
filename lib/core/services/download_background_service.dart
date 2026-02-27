@@ -14,6 +14,7 @@ import 'package:ffmpeg_kit_flutter_new_https/ffmpeg_kit_config.dart';
 class DownloadBackgroundService {
   @pragma('vm:entry-point')
   static Future<void> initialize() async {
+    if (!(Platform.isAndroid || Platform.isIOS)) return;
     final service = FlutterBackgroundService();
 
     await service.configure(
@@ -54,7 +55,9 @@ class DownloadBackgroundService {
       await Hive.initFlutter(Platform.isAndroid ? null : AppDetails.basePath);
       await NotificationService.initialize(isBackground: true);
       // Initialize FFmpegKit for this isolate
-      FFmpegKitConfig.init();
+      if (Platform.isAndroid || Platform.isIOS) {
+        FFmpegKitConfig.init();
+      }
     } catch (e) {
       debugPrint('Error initializing background service: $e');
     }

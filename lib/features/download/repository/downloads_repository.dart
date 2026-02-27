@@ -46,9 +46,11 @@ class DownloadsRepository {
   void removeOngoingPath(String path) => _ongoingPaths.remove(path);
 
   DownloadsRepository._internal() {
-    try {
-      FFmpegKitConfig.init();
-    } catch (_) {}
+    if (Platform.isAndroid || Platform.isIOS) {
+      try {
+        FFmpegKitConfig.init();
+      } catch (_) {}
+    }
   }
   factory DownloadsRepository() {
     _instance ??= DownloadsRepository._internal();
@@ -531,6 +533,7 @@ class DownloadsRepository {
   }
 
   Future<double?> resolvePlaylistDuration(String url) async {
+    if (!(Platform.isAndroid || Platform.isIOS)) return null;
     try {
       final probeSession = await FFprobeKit.getMediaInformation(url);
       final info = probeSession.getMediaInformation();
@@ -633,13 +636,17 @@ class DownloadsRepository {
     ProgressCallback onProgress,
     String id,
   ) async {
+    if (!(Platform.isAndroid || Platform.isIOS)) {
+      throw 'HLS download is not supported on this platform.';
+    }
+
     final outFile = File(savePath);
     final parent = outFile.parent;
     if (!parent.existsSync()) parent.createSync(recursive: true);
 
     final tempPath = savePath;
     double? totalDurationSec = await resolvePlaylistDuration(playlistUrl);
-
+    
     final escapedUrl = playlistUrl.replaceAll('"', '\\"');
     final escapedOut = savePath.replaceAll('"', '\\"');
     final cmd =
@@ -803,6 +810,7 @@ class DownloadsRepository {
     String inputPath,
     List<Map<String, String>> subs,
   ) async {
+    if (!(Platform.isAndroid || Platform.isIOS)) return inputPath;
     if (subs.isEmpty) return inputPath;
     final dir = p.dirname(inputPath);
     final baseName = p.basenameWithoutExtension(inputPath);

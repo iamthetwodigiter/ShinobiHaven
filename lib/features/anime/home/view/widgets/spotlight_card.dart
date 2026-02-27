@@ -33,19 +33,19 @@ class SpotlightCard extends StatelessWidget {
               children: [
                 CachedNetworkImage(
                   imageUrl: anime.image,
-                  height: 400,
+                  height: size.width > 900 ? 700 : 400,
                   width: size.width,
                   fit: BoxFit.cover,
                   memCacheHeight: 800,
                   placeholder: (context, url) => Container(
-                    height: 400,
+                    height: size.width > 900 ? 700 : 400,
                     width: size.width,
                     color: AppTheme.transparentColor,
                     child: Center(child: CircularProgressIndicator()),
                   ),
                   errorWidget: (context, url, error) => Container(
                     width: size.width,
-                    height: 400,
+                    height: size.width > 900 ? 700 : 400,
                     color: AppTheme.transparentColor,
                     child: Center(
                       child: Column(
@@ -63,7 +63,7 @@ class SpotlightCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  height: 400,
+                  height: size.width > 900 ? 700 : 400,
                   width: size.width,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -159,7 +159,7 @@ class SpotlightCard extends StatelessWidget {
         );
       },
       options: CarouselOptions(
-        height: 400,
+        height: MediaQuery.sizeOf(context).width > 900 ? 700 : 400,
         viewportFraction: 1,
         autoPlay: true,
         autoPlayInterval: const Duration(seconds: 8),

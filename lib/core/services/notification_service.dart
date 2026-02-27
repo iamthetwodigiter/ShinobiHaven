@@ -563,7 +563,9 @@ class NotificationHandler {
         final parts = payload.split(':');
         if (parts.length > 1) {
           final id = parts[1];
-          FlutterBackgroundService().invoke('cancel_download', {'id': id});
+          if (Platform.isAndroid || Platform.isIOS) {
+            FlutterBackgroundService().invoke('cancel_download', {'id': id});
+          }
         }
       }
     }

@@ -82,7 +82,7 @@ class _CollectionDetailsPageState extends State<CollectionDetailsPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.folder_open, size: 72, color: AppTheme.gradient1),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   Text(
                     'No animes in this collection',
                     style: TextStyle(
@@ -91,96 +91,66 @@ class _CollectionDetailsPageState extends State<CollectionDetailsPage> {
                       color: AppTheme.gradient1,
                     ),
                   ),
-                  SizedBox(height: 8),
-                  Text('Add some from anime details to populate this list.'),
+                  const SizedBox(height: 8),
+                  const Text('Add some from anime details to populate this list.'),
                 ],
               ),
             )
-          : ListView.separated(
-              padding: EdgeInsets.symmetric(vertical:0),
-              itemCount: _items.length,
-              separatorBuilder: (_, _) => SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final anime = _items[index];
-                return Card(
-                  color: AppTheme.blackGradient.withAlpha(30),
-                  margin: EdgeInsets.symmetric(horizontal: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  child: ListTile(
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12),
-                    leading: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: CachedNetworkImage(
-                        imageUrl: anime.image,
-                        width: 72,
-                        height: 72,
-                        fit: BoxFit.cover,
-                        placeholder: (c, u) => Container(
-                          color: AppTheme.greyGradient,
-                          width: 72,
-                          height: 72,
+          : Padding(
+            padding: const EdgeInsets.all(12),
+            child: GridView.builder(
+                itemCount: _items.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: MediaQuery.sizeOf(context).width > 900 ? 3 : 1,
+                  childAspectRatio: MediaQuery.sizeOf(context).width > 900 ? 2.5 : 4,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemBuilder: (context, index) {
+                  final anime = _items[index];
+                  return Card(
+                    color: AppTheme.blackGradient.withAlpha(30),
+                    margin: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15)),
+                    child: Center(
+                      child: ListTile(
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: CachedNetworkImage(
+                            imageUrl: anime.image,
+                            width: 50,
+                            height: 70,
+                            fit: BoxFit.cover,
+                          ),
                         ),
-                      ),
-                    ),
-                    title: Text(
-                      anime.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Row(
-                      children: [
-                        if (anime.type != null && anime.type!.isNotEmpty) ...[
-                          Text(anime.type!,
-                              style: TextStyle(
-                                  fontSize: 12, color: AppTheme.gradient1)),
-                          SizedBox(width: 10),
-                        ],
-                        if (anime.dubCount != null) ...[
-                          Icon(Icons.mic, size: 12, color: AppTheme.gradient1),
-                          SizedBox(width: 6),
-                          Text(anime.dubCount!, style: TextStyle(fontSize: 12)),
-                          SizedBox(width: 10),
-                        ],
-                        if (anime.subCount != null) ...[
-                          Icon(Icons.closed_caption, size: 12, color: AppTheme.gradient1),
-                          SizedBox(width: 6),
-                          Text(anime.subCount!, style: TextStyle(fontSize: 12)),
-                        ],
-                      ],
-                    ),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (v) {
-                        if (v == 'remove') _removeAnime(anime);
-                        if (v == 'open') {
+                        title: Text(
+                          anime.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          anime.type ?? 'TV',
+                          style: TextStyle(color: AppTheme.gradient1, fontSize: 12),
+                        ),
+                        trailing: IconButton(
+                          icon: Icon(Icons.delete_outline, color: AppTheme.gradient1),
+                          onPressed: () => _removeAnime(anime),
+                        ),
+                        onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => AnimeDetailsPage(animeSlug: anime.slug),
-                            ),
+                                builder: (_) => AnimeDetailsPage(animeSlug: anime.slug)),
                           );
-                        }
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(value: 'open', child: Text('Open details')),
-                        PopupMenuItem(
-                            value: 'remove', child: Text('Remove from collection')),
-                      ],
-                      icon: Icon(Icons.more_vert, color: AppTheme.gradient1),
+                        },
+                      ),
                     ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => AnimeDetailsPage(animeSlug: anime.slug)),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
+          ),
       bottomNavigationBar: null,
     );
   }

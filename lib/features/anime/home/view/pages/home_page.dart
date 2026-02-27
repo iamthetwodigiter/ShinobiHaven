@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -131,7 +132,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
-            expandedHeight: 400,
+            expandedHeight: size.width > 900 ? 700 : 400,
             floating: false,
             pinned: true,
             stretch: true,
@@ -147,7 +148,9 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 0, 120),
+              padding: const EdgeInsets.fromLTRB(16, 20, 0, 0).copyWith(
+                bottom: Platform.isAndroid || Platform.isIOS ? 120 : 60,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -195,20 +198,26 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildLoadingState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Shimmer.fromColors(
-        baseColor: AppTheme.whiteGradient,
-        highlightColor: AppTheme.gradient1.withAlpha(77),
+        baseColor: isDark ? Colors.white10 : Colors.grey[200]!,
+        highlightColor: AppTheme.gradient1.withAlpha(50),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.movie_filter_rounded, size: 80, color: Colors.white),
-            SizedBox(height: 20),
+          children: [
+            Icon(
+              Icons.movie_filter_rounded,
+              size: 80,
+              color: isDark ? Colors.white : Colors.grey[300],
+            ),
+            const SizedBox(height: 20),
             Text(
               'ShinobiHaven',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
+                color: isDark ? Colors.white : Colors.grey[400],
               ),
             ),
           ],
@@ -269,16 +278,21 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _animeHorizontalList(List animes) {
+    final isDesktop = MediaQuery.sizeOf(context).width > 900;
     return SizedBox(
-      height: 250,
+      height: isDesktop ? 320 : 250,
       child: ListView.separated(
         shrinkWrap: true,
         scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
         itemCount: animes.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 12),
+        separatorBuilder: (_, _) => SizedBox(width: isDesktop ? 20 : 12),
         itemBuilder: (context, index) {
           final anime = animes.elementAt(index);
-          return AnimeCard(anime: anime, size: const Size(140, 200));
+          return AnimeCard(
+            anime: anime,
+            size: isDesktop ? const Size(180, 260) : const Size(140, 200),
+          );
         },
       ),
     );

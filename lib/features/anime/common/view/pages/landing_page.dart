@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:shinobihaven/core/constants/app_details.dart';
@@ -23,18 +24,18 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   int _currentIndex = 0;
   final String _installedAppVersion = AppDetails.version;
   StreamSubscription? _notifSub;
-
-  List<Widget> get _pages => [
-    HomePage(),
-    FavoritesPage(),
-    DownloadsPage(),
-    LibraryPage(),
-    ProfilePage(),
-  ];
+  late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
+    _pages = [
+      const HomePage(),
+      const FavoritesPage(),
+      if (Platform.isAndroid || Platform.isIOS) const DownloadsPage(),
+      const LibraryPage(),
+      const ProfilePage(),
+    ];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final storedVersion = UserBoxFunctions.getInstalledVersion();
       if (storedVersion != _installedAppVersion) {
@@ -186,57 +187,222 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = UserBoxFunctions.isDarkMode(context);
+    final size = MediaQuery.sizeOf(context);
+    final isDesktop = size.width > 900;
+
     return Scaffold(
       extendBody: true,
-      body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(30),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              height: 70,
+      body: Row(
+        children: [
+          if (isDesktop)
+            Container(
+              width: 280,
               decoration: BoxDecoration(
                 color: (isDark ? Colors.black : Colors.white).withAlpha(180),
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(
-                  color: AppTheme.gradient1.withAlpha(80),
-                  width: 1.5,
+                border: Border(
+                  right: BorderSide(
+                    color: AppTheme.gradient1.withAlpha(50),
+                    width: 1,
+                  ),
                 ),
-                boxShadow: AppTheme.premiumShadow,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+              child: Column(
                 children: [
-                  _navItem(0, Icons.home_rounded, Icons.home_outlined, 'Home'),
-                  _navItem(
-                    1,
-                    Icons.favorite_rounded,
-                    Icons.favorite_outline,
-                    'Favorites',
+                  const SizedBox(height: 40),
+                  // Logo Area
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.gradient1,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.movie_filter_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'ShinobiHaven',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.gradient1,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  _navItem(
-                    2,
-                    Icons.download_rounded,
-                    Icons.download_outlined,
-                    'Downloads',
+                  const SizedBox(height: 50),
+                  // Nav Items
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      children: [
+                        _desktopNavItem(
+                          0,
+                          'Home',
+                          Icons.home_rounded,
+                          Icons.home_outlined,
+                        ),
+                        _desktopNavItem(
+                          1,
+                          'Favorites',
+                          Icons.favorite_rounded,
+                          Icons.favorite_border_rounded,
+                        ),
+                        if (Platform.isAndroid || Platform.isIOS)
+                          _desktopNavItem(
+                            2,
+                            'Downloads',
+                            Icons.download_rounded,
+                            Icons.download_outlined,
+                          ),
+                        _desktopNavItem(
+                          (Platform.isAndroid || Platform.isIOS) ? 3 : 2,
+                          'Library',
+                          Icons.video_library_rounded,
+                          Icons.video_library_outlined,
+                        ),
+                        _desktopNavItem(
+                          (Platform.isAndroid || Platform.isIOS) ? 4 : 3,
+                          'Profile',
+                          Icons.person_rounded,
+                          Icons.person_outline,
+                        ),
+                      ],
+                    ),
                   ),
-                  _navItem(
-                    3,
-                    Icons.video_library_rounded,
-                    Icons.video_library_outlined,
-                    'Library',
-                  ),
-                  _navItem(
-                    4,
-                    Icons.person_rounded,
-                    Icons.person_outline,
-                    'Profile',
+                  // Bottom Info
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'Version $_installedAppVersion',
+                      style: TextStyle(
+                        color: AppTheme.greyGradient,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
+          Expanded(
+            child: IndexedStack(index: _currentIndex, children: _pages),
+          ),
+        ],
+      ),
+      bottomNavigationBar: isDesktop
+          ? null
+          : Container(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    height: 70,
+                    decoration: BoxDecoration(
+                      color: (isDark ? Colors.black : Colors.white).withAlpha(
+                        180,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: AppTheme.gradient1.withAlpha(80),
+                        width: 1.5,
+                      ),
+                      boxShadow: AppTheme.premiumShadow,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _navItem(
+                          0,
+                          Icons.home_rounded,
+                          Icons.home_outlined,
+                          'Home',
+                        ),
+                        _navItem(
+                          1,
+                          Icons.favorite_rounded,
+                          Icons.favorite_outline,
+                          'Favorites',
+                        ),
+                        _navItem(
+                          2,
+                          Icons.download_rounded,
+                          Icons.download_outlined,
+                          'Downloads',
+                        ),
+                        _navItem(
+                          3,
+                          Icons.video_library_rounded,
+                          Icons.video_library_outlined,
+                          'Library',
+                        ),
+                        _navItem(
+                          4,
+                          Icons.person_rounded,
+                          Icons.person_outline,
+                          'Profile',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _desktopNavItem(
+    int index,
+    String label,
+    IconData selectedIcon,
+    IconData unselectedIcon,
+  ) {
+    final isSelected = _currentIndex == index;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: () => setState(() => _currentIndex = index),
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppTheme.gradient1.withAlpha(40)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: isSelected
+                ? Border.all(color: AppTheme.gradient1.withAlpha(80), width: 1)
+                : null,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isSelected ? selectedIcon : unselectedIcon,
+                color: isSelected ? AppTheme.gradient1 : AppTheme.greyGradient,
+                size: 24,
+              ),
+              const SizedBox(width: 16),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected
+                      ? AppTheme.gradient1
+                      : AppTheme.greyGradient,
+                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+            ],
           ),
         ),
       ),

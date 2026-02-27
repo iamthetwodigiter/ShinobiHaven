@@ -485,13 +485,26 @@ class _EpisodesPageState extends ConsumerState<EpisodesPage> {
                         )
                       : SliverPadding(
                           padding: const EdgeInsets.only(bottom: 30),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) =>
-                                  _buildEpisodeTile(_episodes[index]),
-                              childCount: _episodes.length,
-                            ),
-                          ),
+                          sliver: MediaQuery.sizeOf(context).width > 900
+                            ? SliverGrid(
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3,
+                                  childAspectRatio: 3.2,
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 0,
+                                ),
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) => _buildEpisodeTile(_episodes[index]),
+                                  childCount: _episodes.length,
+                                ),
+                              )
+                            : SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) =>
+                                      _buildEpisodeTile(_episodes[index]),
+                                  childCount: _episodes.length,
+                                ),
+                              ),
                         ),
                 ],
               );

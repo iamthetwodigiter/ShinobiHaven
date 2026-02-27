@@ -163,15 +163,31 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(15, 12, 15, 20),
-                  sliver: SliverList.separated(
-                    itemCount: animes.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final anime = animes[index];
-                      return _buildFavoriteItem(anime, size);
-                    },
-                  ),
+                  sliver: size.width > 900 
+                    ? SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 3.5,
+                          crossAxisSpacing: 15,
+                          mainAxisSpacing: 15,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final anime = animes[index];
+                            return _buildFavoriteItem(anime, size);
+                          },
+                          childCount: animes.length,
+                        ),
+                      )
+                    : SliverList.separated(
+                        itemCount: animes.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final anime = animes[index];
+                          return _buildFavoriteItem(anime, size);
+                        },
+                      ),
                 ),
               ],
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter_onboarding_slider/flutter_onboarding_slider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shinobihaven/core/constants/accent_colors.dart';
@@ -130,8 +131,8 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
           ),
         ),
         background: [
-          _onboardingBg('assets/images/onboarding_poster.png'),
-          _onboardingBg(_assetsPath[_currentProfileChoice]),
+          _onboardingBg('assets/images/onboarding_poster.png', size),
+          _onboardingBg(_assetsPath[_currentProfileChoice], size),
           const SizedBox.shrink(),
           const SizedBox.shrink(),
         ],
@@ -200,26 +201,51 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
     );
   }
 
-  Widget _onboardingBg(String asset) {
-    return Container(
-      width: MediaQuery.sizeOf(context).width,
-      height: 400,
-      decoration: BoxDecoration(
-        image: DecorationImage(image: AssetImage(asset), fit: BoxFit.cover),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.blackGradient,
-              AppTheme.blackGradient.withAlpha(150),
-              AppTheme.blackGradient,
-            ],
+  Widget _onboardingBg(String asset, Size size) {
+    final isDesktop = size.width > 900;
+    final dynamicHeight = isDesktop ? size.height * 0.6 : 500.0;
+
+    return Stack(
+      children: [
+        Container(
+          width: size.width,
+          height: dynamicHeight,
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage(asset),
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+            ),
           ),
         ),
-      ),
+        // Subtle Blur for depth without losing detail
+        Positioned.fill(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+            child: Container(
+              color: Colors.black.withAlpha(100),
+            ),
+          ),
+        ),
+        // Sophisticated Gradient
+        Container(
+          width: size.width,
+          height: dynamicHeight,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withAlpha(150),
+                Colors.transparent,
+                AppTheme.blackGradient.withAlpha(200),
+                AppTheme.blackGradient,
+              ],
+              stops: const [0.0, 0.3, 0.8, 1.0],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -231,214 +257,275 @@ class _OnBoardingPageState extends ConsumerState<OnBoardingPage> {
     Widget? child,
     bool centered = false,
   }) {
-    return Padding(
-      padding: const EdgeInsets.all(30),
-      child: Column(
-        mainAxisAlignment: centered
-            ? MainAxisAlignment.center
-            : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!centered) const SizedBox(height: 350),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 42,
-              fontWeight: FontWeight.w900,
-              color: isTitleGradient ? AppTheme.gradient1 : null,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const SizedBox(height: 20),
-          if (description != null)
-            Text(
-              description,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-                height: 1.5,
+    final size = MediaQuery.sizeOf(context);
+    final isDesktop = size.width > 900;
+    final topSpacing = isDesktop ? size.height * 0.45 : 350.0;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: isDesktop ? 800 : double.infinity),
+        child: Padding(
+          padding: const EdgeInsets.all(30),
+          child: Column(
+            mainAxisAlignment: centered
+                ? MainAxisAlignment.center
+                : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!centered) SizedBox(height: topSpacing),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
-            ),
-          const SizedBox(height: 20),
-          ?child,
-        ],
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: isDesktop ? 52 : 42,
+                  fontWeight: FontWeight.w900,
+                  color: isTitleGradient ? AppTheme.gradient1 : null,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (description != null)
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: isDesktop ? 18 : 16,
+                    color: Colors.grey,
+                    height: 1.5,
+                  ),
+                ),
+              const SizedBox(height: 20),
+              if (child != null) child,
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildProfilePage(Size size) {
-    return Padding(
-      padding: const EdgeInsets.all(30),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          const Spacer(),
-          Text(
-            'IDENTIFY YOURSELF',
-            style: TextStyle(
-              letterSpacing: 2,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-              color: AppTheme.gradient1,
-            ),
-          ),
-          const Text(
-            'Custom Profile',
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _nameController,
-            focusNode: _focusNode,
-            onTap: () {
-              setState(() {
-                _focusNode.hasFocus
-                    ? _focusNode.unfocus()
-                    : _focusNode.requestFocus();
-              });
-            },
-            decoration: InputDecoration(
-              labelText: !_focusNode.hasFocus
-                  ? _namePlaceholders[_currentProfileChoice]
-                  : 'Username',
-              labelStyle: TextStyle(color: AppTheme.whiteGradient, fontSize: 16),
-              hintText: _namePlaceholders[_currentProfileChoice],
-              filled: true,
-              fillColor: AppTheme.surfaceColor(context),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: BorderSide(
-                  color: AppTheme.gradient1.withAlpha(50),
-                  width: 1.5,
+    final isDesktop = size.width > 900;
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: isDesktop ? 800 : double.infinity),
+        child: Padding(
+          padding: const EdgeInsets.all(30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              const Spacer(),
+              Text(
+                'IDENTIFY YOURSELF',
+                style: TextStyle(
+                  letterSpacing: 2,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  color: AppTheme.gradient1,
                 ),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: BorderSide(
-                  color: AppTheme.gradient1.withAlpha(50),
-                  width: 1.5,
-                ),
+              const Text(
+                'Custom Profile',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: BorderSide(color: AppTheme.gradient1, width: 2),
-              ),
-              prefixIcon: const Icon(Icons.person_outline),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Pick an Avatar',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          Flexible(
-            child: GridView.builder(
-              itemCount: _assetsPath.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: size.width > 600 ? 6 : 4,
-                mainAxisSpacing: 5,
-                crossAxisSpacing: 5,
-              ),
-              itemBuilder: (context, index) {
-                final isSelected = _currentProfileChoice == index;
-                return GestureDetector(
-                  onTap: () => setState(() => _currentProfileChoice = index),
+              const SizedBox(height: 25),
+              // Prominent profile preview with animation
+              Align(
+                alignment: Alignment.centerLeft,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  transitionBuilder: (child, animation) {
+                    return ScaleTransition(
+                      scale: animation,
+                      child: FadeTransition(opacity: animation, child: child),
+                    );
+                  },
                   child: Container(
+                    key: ValueKey<int>(_currentProfileChoice),
+                    width: 100,
+                    height: 100,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isSelected
-                            ? AppTheme.gradient1
-                            : Colors.transparent,
-                        width: 3,
+                        color: AppTheme.gradient1,
+                        width: 4,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.gradient1.withAlpha(100),
+                          blurRadius: 25,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                      image: DecorationImage(
+                        image: AssetImage(_assetsPath[_currentProfileChoice]),
+                        fit: BoxFit.cover,
                       ),
                     ),
-                    child: CircleAvatar(
-                      backgroundImage: AssetImage(_assetsPath[index]),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 25),
+              TextField(
+                controller: _nameController,
+                focusNode: _focusNode,
+                onTap: () {
+                  setState(() {
+                    _focusNode.hasFocus
+                        ? _focusNode.unfocus()
+                        : _focusNode.requestFocus();
+                  });
+                },
+                decoration: InputDecoration(
+                  labelText: !_focusNode.hasFocus
+                      ? _namePlaceholders[_currentProfileChoice]
+                      : 'Username',
+                  labelStyle: TextStyle(color: AppTheme.whiteGradient, fontSize: 16),
+                  hintText: _namePlaceholders[_currentProfileChoice],
+                  filled: true,
+                  fillColor: AppTheme.surfaceColor(context),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(
+                      color: AppTheme.gradient1.withAlpha(50),
+                      width: 1.5,
                     ),
                   ),
-                );
-              },
-            ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(
+                      color: AppTheme.gradient1.withAlpha(50),
+                      width: 1.5,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: AppTheme.gradient1, width: 2),
+                  ),
+                  prefixIcon: const Icon(Icons.person_outline),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Pick an Avatar',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Flexible(
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  itemCount: _assetsPath.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: size.width > 600 ? (isDesktop ? 10 : 6) : 4,
+                    mainAxisSpacing: 5,
+                    crossAxisSpacing: 5,
+                  ),
+                  itemBuilder: (context, index) {
+                    final isSelected = _currentProfileChoice == index;
+                    return GestureDetector(
+                      onTap: () => setState(() => _currentProfileChoice = index),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected
+                                ? AppTheme.gradient1
+                                : Colors.transparent,
+                            width: 3,
+                          ),
+                        ),
+                        child: CircleAvatar(
+                          backgroundImage: AssetImage(_assetsPath[index]),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildThemePage(Color accentColor) {
-    return Padding(
-      padding: const EdgeInsets.all(30),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 50),
-          Text(
-            'AESTHETICS',
-            style: TextStyle(
-              letterSpacing: 2,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-              color: AppTheme.gradient1,
-            ),
-          ),
-          const Text(
-            'Visual Style',
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 30),
-          Row(
+    final size = MediaQuery.sizeOf(context);
+    final isDesktop = size.width > 900;
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: isDesktop ? 800 : double.infinity),
+        child: Padding(
+          padding: const EdgeInsets.all(30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _styleCard('Light', Icons.wb_sunny_outlined, 0),
-              const SizedBox(width: 15),
-              _styleCard('Dark', Icons.nightlight_round_outlined, 1),
-              const SizedBox(width: 15),
-              _styleCard('System', Icons.settings_suggest_outlined, 2),
+              const SizedBox(height: 50),
+              Text(
+                'AESTHETICS',
+                style: TextStyle(
+                  letterSpacing: 2,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  color: AppTheme.gradient1,
+                ),
+              ),
+              const Text(
+                'Visual Style',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 30),
+              Row(
+                children: [
+                  _styleCard('Light', Icons.wb_sunny_outlined, 0),
+                  const SizedBox(width: 15),
+                  _styleCard('Dark', Icons.nightlight_round_outlined, 1),
+                  const SizedBox(width: 15),
+                  _styleCard('System', Icons.settings_suggest_outlined, 2),
+                ],
+              ),
+              const SizedBox(height: 30),
+              const Text(
+                'Accent Color',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  itemCount: AccentColors.accentColors.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: isDesktop ? 12 : 6,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                  ),
+                  itemBuilder: (context, index) {
+                    final color = AccentColors.accentColors[index];
+                    final isSelected = color.toARGB32() == accentColor.toARGB32();
+                    return GestureDetector(
+                      onTap: () => _setAccentColor(color),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected ? Colors.white : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                        child: isSelected
+                            ? const Icon(Icons.check, color: Colors.white, size: 16)
+                            : null,
+                      ),
+                    );
+                  },
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 30),
-          const Text(
-            'Accent Color',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: GridView.builder(
-              itemCount: AccentColors.accentColors.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 6,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-              ),
-              itemBuilder: (context, index) {
-                final color = AccentColors.accentColors[index];
-                final isSelected = color.toARGB32() == accentColor.toARGB32();
-                return GestureDetector(
-                  onTap: () => _setAccentColor(color),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isSelected ? Colors.white : Colors.transparent,
-                        width: 2,
-                      ),
-                    ),
-                    child: isSelected
-                        ? const Icon(Icons.check, color: Colors.white, size: 16)
-                        : null,
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -349,15 +349,16 @@ class _LibraryPageState extends State<LibraryPage> {
   }
 
   Widget _buildCollectionsGrid() {
+    final isDesktop = MediaQuery.sizeOf(context).width > 900;
     if (_collections.isEmpty) {
       return _buildEmptyPlaceholder('Create your first collection!');
     }
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 1.4,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: isDesktop ? 4 : 2,
+        childAspectRatio: isDesktop ? 1.8 : 1.4,
         crossAxisSpacing: 15,
         mainAxisSpacing: 15,
       ),
